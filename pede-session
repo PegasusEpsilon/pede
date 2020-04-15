@@ -17,7 +17,7 @@ xsetroot -cursor_name arrow &
 hsetroot -center $WALLPAPER &
 xset -dpms s off &
 
-# tart some daemons
+# start some daemons
 /usr/bin/start-pulseaudio-x11 &
 /usr/bin/xcompmgr &
 xbanish &
