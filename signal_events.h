@@ -1,5 +1,5 @@
-#ifndef SIGNALS_H
-#define SIGNALS_H
+#ifndef SIGNAL_EVENTS_H
+#define SIGNAL_EVENTS_H
 #include <signal.h>
 typedef enum {
 #define MAGIC_EXPANDO(x) x,

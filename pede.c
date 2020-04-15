@@ -21,7 +21,7 @@
 
 #include "atoms.h"
 #include "events.h"
-#include "signals.h"
+#include "signal_events.h"
 
 // TODO: break everything out into modules, then write:
 // inter-window snapping/gluing, generalized keyboard shortcuts
@@ -430,15 +430,15 @@ void map_window (XMapRequestEvent *ev) {
 char *argv0 = NULL;
 bool signal_handler (void) {
 	printf("received signal %d\n", which_signal);
+	fflush(stdout);
 	switch (which_signal) {
 	case SIGINT:
-		puts("SIGINT");
+		puts("\nInterrupted.");
 		return true;
 	case SIGUSR1:
 		execlp(argv0, argv0);
 		// we never get here anyway
 	}
-	fflush(stdout);
 	return false;
 }
 
