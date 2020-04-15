@@ -1,0 +1,23 @@
+#!/bin/sh
+
+# config
+PEDE_DIRECTORY=$HOME/code/pede # pede and power.icon should both live here.
+WALLPAPER=$HOME/Pictures/wallpaper.png
+
+cd
+export GTK_THEME=Cloak-3.22
+export GTK2_RC_FILES=/usr/share/themes/$GTK_THEME/gtk-2.0/gtkrc
+export XAUTHORITY=~/.Xauthority
+/usr/bin/xcompmgr &
+xbanish &
+ibus-daemon --xim &
+ksuperkey &
+/usr/bin/start-pulseaudio-x11 &
+xsetroot -cursor_name arrow &
+hsetroot -center $WALLPAPER &
+xset -dpms s off &
+rm $PEDE_DIRECTORY/stopping
+touch $PEDE_DIRECTORY/starting
+$PEDE_DIRECTORY/pede > $PEDE_DIRECTORY/pede.log
+rm $PEDE_DIRECTORY/starting
+touch $PEDE_DIRECTORY/stopping

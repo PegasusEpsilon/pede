@@ -1,0 +1,7 @@
+*.o
+pede
+pede.log
+utils
+pasture
+starting
+stopping
