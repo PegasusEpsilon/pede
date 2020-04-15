@@ -1,4 +1,4 @@
 char *event_names[] = {
-#define MAGIC_EXPANDO(x) [x] = #x,
-#include "eventlist.h"
+#define EVENT_EXPANDO(x) [x] = #x,
+#include "expandos.h"
 };

@@ -2,8 +2,8 @@
 #define SIGNAL_EVENTS_H
 #include <signal.h>
 typedef enum {
-#define MAGIC_EXPANDO(x) x,
-#include "signallist.h"
+#define SIGNAL_EXPANDO(x) x,
+#include "expandos.h"
 } SIG;
 char **sig_names;
 int *sig_values;

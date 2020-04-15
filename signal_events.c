@@ -5,16 +5,16 @@
 #include <stdio.h>	// puts(), printf(), perror(), fflush(), stdout
 
 typedef enum {
-#define MAGIC_EXPANDO(x) x,
-#include "signallist.h"
+#define SIGNAL_EXPANDO(x) x,
+#include "expandos.h"
 } SIG;
 char **sig_names = (char *[]){
-#define MAGIC_EXPANDO(x) [x] = #x,
-#include "signallist.h"
+#define SIGNAL_EXPANDO(x) [x] = #x,
+#include "expandos.h"
 };
 int *sig_values = (int []){
-#define MAGIC_EXPANDO(x) [x] = SIG ## x,
-#include "signallist.h"
+#define SIGNAL_EXPANDO(x) [x] = SIG ## x,
+#include "expandos.h"
 };
 int which_signal = 0;
 
@@ -32,6 +32,6 @@ static inline void hook (SIG sig, void (*handler)(int)) {
 void report (int s) { which_signal = s; }
 
 void report_signals (void) {
-#define MAGIC_EXPANDO(x) hook(x, &report);
-#include "signallist.h"
+#define SIGNAL_EXPANDO(x) hook(x, &report);
+#include "expandos.h"
 }

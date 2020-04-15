@@ -8,8 +8,8 @@
 #define ATOMS_H
 enum Atoms {
 	WM_Sn,
-#define MAGIC_EXPANDO(x) x,
-#include "atomlist.h"
+#define ATOM_EXPANDO(x) x,
+#include "expandos.h"
 	ATOMS_LENGTH
 };
 extern Atom atom[ATOMS_LENGTH];

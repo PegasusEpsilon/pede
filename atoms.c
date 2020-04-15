@@ -10,8 +10,8 @@
 
 enum Atoms {
 	WM_Sn,
-#define MAGIC_EXPANDO(x) x,
-#include "atomlist.h"
+#define ATOM_EXPANDO(x) x,
+#include "expandos.h"
 	ATOMS_LENGTH
 };
 Atom atom[ATOMS_LENGTH];
@@ -19,8 +19,8 @@ Atom atom[ATOMS_LENGTH];
 static char *atom_names[] = {
 	[WM_Sn] = NULL,
 // Not needed, yet...
-//#define MAGIC_EXPANDO(x) [x] = #x,
-//#include "atomlist.h"
+//#define ATOM_EXPANDO(x) [x] = #x,
+//#include "expandos.h"
 };
 
 void shutdown_atom_cache (void) { free(atom_names[WM_Sn]); }
@@ -50,6 +50,6 @@ void initialize_atom_cache (Display *display, char **envp) {
 		}
 	atom[WM_Sn] = XInternAtom(display, atom_names[WM_Sn], False);
 
-#define MAGIC_EXPANDO(x) atom[x] = XInternAtom(display, #x, False);
-#include "atomlist.h"
+#define ATOM_EXPANDO(x) atom[x] = XInternAtom(display, #x, False);
+#include "expandos.h"
 }
