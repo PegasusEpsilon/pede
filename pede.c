@@ -289,6 +289,7 @@ void alter_window_state (XClientMessageEvent event) {
 
 void maximize_window (Display *display, Window window) {
 	// FIXME: _NET_WM_STATE_FULLSCREEN
+	// still trying to figure out wtf to do here...
 	int x, y;
 	unsigned int w, h;
 	XGetGeometry(display, window, NULL, &x, &y, &w, &h, NULL, NULL);
@@ -418,12 +419,17 @@ void map_window (XMapRequestEvent *ev) {
 		return;
 	}
 	set_workspace(ev->display, ev->window, active_workspace(ev->display));
-	XGetGeometry(ev->display, ev->window, VOID, VOID, VOID, &width, &height, VOID, VOID);
-	XConfigureWindow(ev->display, ev->window, CWX | CWY,
+
+	int x, y;
+	XGetGeometry(ev->display, ev->window, VOID,
+		&x, &y, &width, &height, VOID, VOID);
+
+	if (0 == x && 0 == y) XConfigureWindow(ev->display, ev->window, CWX | CWY,
 		&(XWindowChanges){
-		.x = (root.width - width) / 2,
-		.y = (root.height - height) / 2
-	});
+			.x = (root.width - width) / 2,
+			.y = (root.height - height) / 2
+		}
+	);
 	XMapWindow(ev->display, ev->window);
 }
 
