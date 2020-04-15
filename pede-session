@@ -10,7 +10,7 @@ export GTK2_RC_FILES=/usr/share/themes/$GTK_THEME/gtk-2.0/gtkrc
 export XAUTHORITY=$HOME/.Xauthority
 
 # make sure new processes start somewhere sensible
-pushd
+pushd $HOME
 
 # configure X itself
 xsetroot -cursor_name arrow &
