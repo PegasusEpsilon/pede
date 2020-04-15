@@ -1,21 +1,4 @@
 char *event_names[] = {
-	[MapNotify] = "MapNotify",
-	[ConfigureRequest] = "ConfigureRequest",
-	[Expose] = "Expose",
-	[SelectionRequest] = "SelectionRequest",
-	[ClientMessage] = "ClientMessage",
-	[MapRequest] = "MapRequest",
-	[CirculateNotify] = "CirculateNotify",
-	[SelectionClear] = "SelectionClear",
-	[KeyPress] = "KeyPress",
-	[ButtonPress] = "ButtonPress",
-	[MotionNotify] = "MotionNotify",
-	[ButtonRelease] = "ButtonRelease",
-	[CreateNotify] = "CreateNotify",
-	[MappingNotify] = "MappingNotify",
-	[UnmapNotify] = "UnmapNotify",
-	[DestroyNotify] = "DestroyNotify",
-	[KeyRelease] = "KeyRelease",
-	[ConfigureNotify] = "ConfigureNotify",
-	[PropertyNotify] = "PropertyNotify"
+#define MAGIC_EXPANDO(x) [x] = #x,
+#include "eventlist.h"
 };
