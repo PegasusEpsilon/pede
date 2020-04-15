@@ -460,10 +460,10 @@ void XWaitEvent (Display *display) {
 	}
 }
 
-typedef enum { KcTab, KcF4, KcR, Kc1, Kc2, Kc3, Kc4, Kc_LAST } WatchedKeyCode;
+typedef enum { KcAltL, KcTab, KcF4, KcR, Kc1, Kc2, Kc3, Kc4, Kc_LAST } WatchedKeyCode;
 KeyCode keycodes[Kc_LAST];
 char *keycode_names[] = {
-	[KcTab] = "Tab", [KcF4] = "F4", [KcR] = "R",
+	[KcAltL] = "Alt_L", [KcTab] = "Tab", [KcF4] = "F4", [KcR] = "R",
 	[Kc1] = "1", [Kc2] = "2", [Kc3] = "3", [Kc4] = "4",
 };
 
@@ -548,8 +548,7 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 				// TODO: change this to manually select and raise
 				// the bottom window or lower the top window
 				XCirculateSubwindows(event.xkey.display, event.xkey.root,
-				event.xkey.state & 1 ? LowerHighest : RaiseLowest);
-				XLowerWindow(event.xkey.display, pede);
+					event.xkey.state & Mod1Mask ? LowerHighest : RaiseLowest);
 			}// while (active_window(event.xkey.display) == pede);
 			else if (event.xkey.keycode == keycodes[KcR]) {
 				if (!fork()) execlp(RUNNER, RUNNER, RUNNERARGS);
@@ -687,10 +686,13 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 		case ButtonRelease:
 			XUngrabPointer(display, event.xbutton.time);
 			break;
+		case KeyRelease:
+			if (keycodes[KcAltL] == event.xkey.keycode)
+				XLowerWindow(event.xkey.display, pede);
+			break;
 		case MappingNotify: // display start menu?
 		case CreateNotify: // fall through
 		case UnmapNotify:
-		case KeyRelease:
 		case ConfigureNotify:
 		case PropertyNotify:
 			break;
@@ -808,13 +810,15 @@ int main (int argc, char **argv, char **envp) {
 //		| PropertyChangeMask // PropertyNotify
 	);
 
-	keycodes[KcTab] = XKeysymToKeycode(display, XStringToKeysym("Tab"));
-	keycodes[KcF4] = XKeysymToKeycode(display, XStringToKeysym("F4"));
-	keycodes[KcR] = XKeysymToKeycode(display, XStringToKeysym("R"));
-	keycodes[Kc1] = XKeysymToKeycode(display, XStringToKeysym("1"));
-	keycodes[Kc2] = XKeysymToKeycode(display, XStringToKeysym("2"));
-	keycodes[Kc3] = XKeysymToKeycode(display, XStringToKeysym("3"));
-	keycodes[Kc4] = XKeysymToKeycode(display, XStringToKeysym("4"));
+	keycodes[KcAltL] = XKeysymToKeycode(display, XStringToKeysym(keycode_names[KcAltL]));
+	keycodes[KcTab] = XKeysymToKeycode(display, XStringToKeysym(keycode_names[KcTab]));
+	keycodes[KcF4] = XKeysymToKeycode(display, XStringToKeysym(keycode_names[KcF4]));
+	keycodes[KcR] = XKeysymToKeycode(display, XStringToKeysym(keycode_names[KcR]));
+	keycodes[Kc1] = XKeysymToKeycode(display, XStringToKeysym(keycode_names[Kc1]));
+	keycodes[Kc2] = XKeysymToKeycode(display, XStringToKeysym(keycode_names[Kc2]));
+	keycodes[Kc3] = XKeysymToKeycode(display, XStringToKeysym(keycode_names[Kc3]));
+	keycodes[Kc4] = XKeysymToKeycode(display, XStringToKeysym(keycode_names[Kc4]));
+	XGrabKey(display, keycodes[KcAltL], None, root.handle, True, GrabModeAsync, GrabModeAsync);
 	XGrabKey(display, keycodes[KcTab], Mod1Mask, root.handle, True, GrabModeAsync, GrabModeAsync);
 	XGrabKey(display, keycodes[KcTab], Mod1Mask | ShiftMask, root.handle, True, GrabModeAsync, GrabModeAsync);
 	XGrabKey(display, keycodes[KcF4], Mod1Mask, root.handle, True, GrabModeAsync, GrabModeAsync);
