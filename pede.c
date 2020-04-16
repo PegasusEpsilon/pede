@@ -100,6 +100,17 @@ XImage *load_image (Display *display, int screen, Visual *visual, char *filename
 		(void *)data, WIDTH, HEIGHT, BPP, WIDTH * sizeof(PIXEL));
 }
 
+XImage *img;
+GC gc;
+void cleanup (void) {
+	unhook_keys();
+	XDestroyImage(img);
+	XFreeGC(display, gc);
+	XDestroyWindow(display, pede);
+	XCloseDisplay(display);
+	shutdown_atom_cache();
+}
+
 char *argv0 = NULL;
 bool signal_handler (void) {
 	printf("received signal %d\n", which_signal);
@@ -112,6 +123,7 @@ bool signal_handler (void) {
 		puts("\nTerminated.");
 		return True;
 	case SIGUSR1:
+		cleanup();
 		execlp(argv0, argv0);
 		// we never get here anyway
 	}
@@ -416,7 +428,7 @@ int main (int argc, char **argv, char **envp) {
 	XChangeProperty(display, pede, atom[_NET_SUPPORTING_WM_CHECK],
 		atom[WINDOW], 32, PropModeReplace, (void *)&pede, 1);
 
-	GC gc = XCreateGC(display, pede, 0, 0);
+	gc = XCreateGC(display, pede, 0, 0);
 	// we assume FILENAME lives in our directory
 	char *filename;
 	filename = malloc(1 + strlen(argv[0]));
@@ -424,7 +436,7 @@ int main (int argc, char **argv, char **envp) {
 	dirname(filename);
 	filename = realloc(filename, 2 + strlen(filename) + strlen(FILENAME));
 	strcat(strcat(filename, "/"), FILENAME);
-	XImage *img = load_image(display, screen, visualinfo.visual, filename);
+	img = load_image(display, screen, visualinfo.visual, filename);
 	// load_image frees the filename for us
 	// free(filename);
 
@@ -475,14 +487,8 @@ int main (int argc, char **argv, char **envp) {
 	// show all windows
 	activate_workspace((uint32_t)-1);
 
-	unhook_keys();
+	cleanup();
 
-	XDestroyImage(img);
-	XFreeGC(display, gc);
-	XDestroyWindow(display, pede);
-	XCloseDisplay(display);
-
-	shutdown_atom_cache();
 	puts("Clean shutdown.");
 
 	return 0;
