@@ -23,11 +23,11 @@ This DE is not for the faint of heart. It is for the extreme minimalist.
 - It positions windows. It positions windows ***well***.
 - It closes windows politely if they ask for politeness, rudely if they do not
 - It has workspaces
-- It lets you switch between workspaces (Super+[1234])
-- It lets you move windows between workspaces (Super+Shift+[1234])
+- It lets you switch between workspaces (Super+[1234], Super+(left|right) arrow)
+- It lets you move windows between workspaces (Super+Shift+[1234], Super+Shift+(left|right) arrow)
 - It lets you move and resize windows with the mouse
-  - Super+left = move
-  - Super+right = resize
+  - Super+left-click = move
+  - Super+right-click = resize
 - It lets you alt+tab (barely, I know, it's on my TODO)
 - It snaps windows to the edge of the screen (but not each other yet, also TODO)
 - It draws a compositor-friendly power button in a configurable location
