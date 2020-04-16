@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "wm.h"
+#include "wm_core.h"
 #include "config.h"
 
 typedef enum {
@@ -57,8 +57,12 @@ void handle_key_events (XEvent event) {
 		} else if (event.xkey.keycode == keycodes[KcXF86AudioMute]) {
 			if (!fork())
 				execlp(VOLUME_CONTROL, VOLUME_CONTROL, TOGGLE_MUTE, NULL);
-		} else puts("caught unhandled keystroke, your KEY_EXPANDO list "
+		} else if (event.xkey.keycode == keycodes[KcAlt_L]) {
+			// reserved for alt+tab
+		} else {
+			puts("caught unhandled keystroke, your KEY_EXPANDO list "
 				"is out of sync with keys.c");
+		}
 		break;
 	case KeyRelease:
 		if (keycodes[KcAlt_L] == event.xkey.keycode)

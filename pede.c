@@ -19,7 +19,7 @@
 #include <sys/select.h>	// fd_set, pipe(), FD_SET(), FD_ZERO(), select()
 #include <time.h>   	// nanosleep()
 
-#include "wm.h"
+#include "wm_core.h"
 #include "keys.h"
 #include "atoms.h"
 #include "events.h"
@@ -356,7 +356,6 @@ int main (int argc, char **argv, char **envp) {
 	XSetErrorHandler(death_proof);
 
 	// play stupid X games
-	Display *display;
 	if (!(display = XOpenDisplay(NULL))) {
 		unsigned i = 0;
 		while (envp[i] && strncmp(envp[i], "DISPLAY=:", 9)) i++;

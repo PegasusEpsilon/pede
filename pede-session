@@ -26,7 +26,7 @@ ibus-daemon --xim &
 # start pede
 rm $PEDE_DIRECTORY/stopping
 touch $PEDE_DIRECTORY/starting
-$PEDE_DIRECTORY/pede > $PEDE_DIRECTORY/pede.log
+$PEDE_DIRECTORY/pede 2>&1 > $PEDE_DIRECTORY/pede.log
 rm $PEDE_DIRECTORY/starting
 touch $PEDE_DIRECTORY/stopping
 

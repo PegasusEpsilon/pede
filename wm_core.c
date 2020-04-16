@@ -21,29 +21,30 @@ struct { Window handle; unsigned int width, height; } root;
 Window pede;
 
 unsigned char active_workspace (Display *display) {
-	Atom ret_type;
-	int ret_format;
-	unsigned long ret_nitems, ret_bytes_after;
-	uint32_t *ret_workspace = NULL;
+	uint32_t *workspace = NULL;
 	XGetWindowProperty(display, root.handle, atom[_NET_CURRENT_DESKTOP], 0,
-		BUFFER_LENGTH, False, atom[CARDINAL], &ret_type, &ret_format,
-		&ret_nitems, &ret_bytes_after, (void *)&ret_workspace);
-	return ret_workspace ? *ret_workspace: 0;
+		1, False, atom[CARDINAL], VOID, VOID, VOID, VOID, (void *)&workspace);
+	return workspace ? *workspace: 0;
 }
 
 Window active_window (Display *display) {
-	Window ret_root, ret_parent, *list;
+	Window *list;
+	Window active = None;
 	unsigned count = 0;
 	XWindowAttributes attrs;
 
-	XQueryTree(display, root.handle, &ret_root, &ret_parent, &list, &count);
+	XQueryTree(display, root.handle, VOID, VOID, &list, &count);
 	for (int i = count; i && list[--i];) {
 		XGetWindowAttributes(display, list[i], &attrs);
 		// Setting focus on withdrawn/iconified windows is an error.
 		// Always consider them inactive.
-		if (IsViewable == attrs.map_state) return list[i];
+		if (IsViewable == attrs.map_state) {
+			active = list[i];
+			break;
+		}
 	}
-	return None;
+	XFree(list);
+	return active;
 }
 
 void focus_window (Display *display, Window window) {
@@ -97,31 +98,29 @@ void set_workspace (Display *display, Window window, uint32_t workspace) {
 unsigned long XDeleteAtomFromArray (
 	Atom *array, unsigned long length, Atom element
 ) {
-	unsigned long dst = 0;
-	for (unsigned long src = 0; src < length; src++, dst++) {
+	unsigned long src = 0, dst = 0;
+	while (length && src < length) {
 		while (src < length && array[src] == element) src++;
-		if (src != dst) array[dst] = array[src];
+		if (src < length && src != dst) array[dst++] = array[src++];
 	}
 	return dst;
 }
 
 void *XGetWindowPropertyArray (
 	Display *display, Window window, Atom property,
-	Atom type, unsigned long *count
+	Atom type, unsigned long *count, int *bits
 ) {
+	Atom _type;
+	void *data = NULL;
 
-	Atom ret_type;
-	void *data;
-	int bits;
-	unsigned long size;
-
-	XGetWindowProperty(display, window, property, 0, 0, False, type, &ret_type,
-		&bits, VOID, &size, (void *)&data);
+	XGetWindowProperty(display, window, property, 0, 0, False, type, &_type,
+		bits, VOID, count, (void *)&data);
 	XFree(data);
-	if (type != ret_type) return (void *)(*count = 0);
-	*count = size * 8 / bits;
+
+	if (type != _type) return (void *)(*count = 0);
+	*count /= *bits / 8;
 	XGetWindowProperty(display, window, property, 0, *count, False, type,
-		VOID, VOID, count, VOID, (void *)&data);
+		VOID, VOID, VOID, VOID, (void *)&data);
 
 	return data;
 }
@@ -130,13 +129,15 @@ Bool XWindowPropertyArrayContains (
 	Display *display, Window window, Atom haystack, Atom needle
 ) {
 	unsigned long i;
+	int bits;
 	Atom *data = XGetWindowPropertyArray(display, window, haystack,
-		atom[ATOM], &i);
+		atom[ATOM], &i, &bits);
 	while (i--)
 		if (needle == data[i]) {
-			free(data);
+			XFree(data);
 			return True;
 		}
+	XFree(data);
 	return False;
 }
 
@@ -154,51 +155,80 @@ void close_window (Display *display, Window window) {
 	else XDestroyWindow(display, window);
 }
 
+void restore_window (Display *display, Window window) {
+	XSizeHints sizehints;
+	XGetWMSizeHints(display, window, &sizehints, VOID, atom[WM_NORMAL_HINTS]);
+	if ((USPosition | USSize) & sizehints.flags)
+		XMoveResizeWindow(display, window, sizehints.x, sizehints.y,
+			sizehints.width, sizehints.height);
+}
+
 void remove_state (Display *display, Window window, Atom state) {
-	Atom *data;
-	unsigned long i;
+	if (state == atom[_NET_WM_STATE_FULLSCREEN])
+		restore_window(display, window);
+
+	int bits;
+	unsigned long count;
 
 	char *state_name = XGetAtomName(display, state);
-	//printf("Remove state %s from window %d\n", state_name, window);
-
-	data = XGetWindowPropertyArray(display, window,
-		atom[_NET_WM_STATE], atom[ATOM], &i);
-	if (!i) {
-		printf("Can't remove %s from window %d because it has no"
+	Atom *states = XGetWindowPropertyArray(display, window,
+		atom[_NET_WM_STATE], atom[ATOM], &count, &bits);
+	if (!count) {
+		printf("Can't remove %s from window 0x%08lx because it has no"
 			" _NET_WM_STATEs.\n", state_name, window);
+		XFree(state_name);
 		return;
-	}
-	XFree(state_name);
+	} else printf("Remove state %s from window 0x%08lx\n", state_name, window);
 
-	unsigned long new_i = XDeleteAtomFromArray(data, i, state);
-	if (new_i != i) {
-		if (new_i) XChangeProperty(display, window, atom[_NET_WM_STATE],
-			atom[ATOM], 32, PropModeReplace, (void *)&data, new_i);
+	printf("enumerating %d extant states\n", count);
+	for (unsigned long i = 0; i < count; i++) {
+		printf("state: %s\n", XGetAtomName(display, states[i]));
+		fflush(stdout);
+	}
+
+	unsigned long new_count = XDeleteAtomFromArray(states, count, state);
+	if (new_count != count) {
+		if (new_count) XChangeProperty(display, window, atom[_NET_WM_STATE],
+			atom[ATOM], 8 * sizeof(state), PropModeReplace, (void *)&states, new_count);
 		else XDeleteProperty(display, window, atom[_NET_WM_STATE]);
-	}
+	} else printf("Window 0x%08lx's _NET_WM_STATE contains no %s\n", window, state_name);
 
-	XFree(data);
+	XFree(state_name);
+	XFree(states);
+}
+
+void maximize_window (Display *display, Window window) {
+	union {
+		struct { long flags; XWindowAttributes attributes; } hax;
+		XSizeHints sizehints;
+	} hax = { .hax.flags = USPosition | USSize };
+	XGetWindowAttributes(display, window, &hax.hax.attributes);
+	XSetWMSizeHints(display, window, &hax.sizehints, atom[WM_NORMAL_HINTS]);
+	XMoveResizeWindow(display, window, 0, 0, root.width, root.height);
 }
 
 void add_state (Display *display, Window window, Atom state) {
-	Atom states[32] = { 0 };
+	if (state == atom[_NET_WM_STATE_FULLSCREEN])
+		maximize_window(display, window);
+
+	printf("Add state %s to window 0x%08lx\n", XGetAtomName(display, state), window);
+
 	unsigned long count;
-
-	printf("Add state %s to window %d\n", XGetAtomName(display, state), window);
-
-	// FIXME: state _NET_WM_STATE_FULLSCREEN = "please maximize me"
-
-	XGetWindowProperty(display, window, atom[_NET_WM_STATE], 0, 0, False,
-		atom[ATOM], VOID, VOID, &count, VOID, (void *)&states);
+	Atom *states = (Atom *)XGetWindowPropertyArray(
+		display, window, atom[_NET_WM_STATE], atom[ATOM], &count, VOID
+	);
 
 	printf("Enumerating %d existing states:\n", count);
 
-	for (unsigned long i = count; i && states[--i]; ) {
-		printf("%s\n", XGetAtomName(display, states[i]));
-	}
-	states[count] = state;
-	XChangeProperty(display, window, atom[_NET_WM_STATE], atom[ATOM], 32,
-		PropModeReplace, (void *)&states, count + 1);
+	for (unsigned long i = 0; i < count && states[i]; i--)
+		printf("%d: %s\n", i, XGetAtomName(display, states[i]));
+
+	size_t size = (++count) * sizeof(state);
+	states = realloc(states, size);
+	states[count - 1] = state;
+	XChangeProperty(display, window, atom[_NET_WM_STATE], atom[ATOM],
+		4 * sizeof(state), PropModeReplace, (void *)states, count);
+	XFree(states);
 }
 
 void alter_window_state (XClientMessageEvent event) {
@@ -226,29 +256,6 @@ void alter_window_state (XClientMessageEvent event) {
 			}
 		break;
 	}
-}
-
-void maximize_window (Display *display, Window window) {
-	// FIXME: _NET_WM_STATE_FULLSCREEN
-	// still trying to figure out wtf to do here...
-	int x, y;
-	unsigned int w, h;
-	XGetGeometry(display, window, NULL, &x, &y, &w, &h, NULL, NULL);
-	XChangeProperty(display, window,
-		XInternAtom(display, "WM_RESTORE_TOP", False), atom[CARDINAL], 32,
-		PropModeReplace, (void *)&y, 1);
-	XChangeProperty(display, window,
-		XInternAtom(display, "WM_RESTORE_TOP", False), atom[CARDINAL], 32,
-		PropModeReplace, (void *)&y, 1);
-	XChangeProperty(display, window,
-		XInternAtom(display, "WM_RESTORE_LEFT", False), atom[CARDINAL], 32,
-		PropModeReplace, (void *)&x, 1);
-	XChangeProperty(display, window,
-		XInternAtom(display, "WM_RESTORE_HEIGHT", False), atom[CARDINAL], 32,
-		PropModeReplace, (void *)&h, 1);
-	XChangeProperty(display, window,
-		XInternAtom(display, "WM_RESTORE_WIDTH", False), atom[CARDINAL], 32,
-		PropModeReplace, (void *)&w, 1);
 }
 
 void refuse_selection_request (XSelectionRequestEvent request) {
@@ -290,11 +297,9 @@ void map_window (XMapRequestEvent *ev) {
 		ev->display, ev->window, &hints, VOID, atom[WM_NORMAL_HINTS]
 	);
 
-	if (!(hints.flags & PPosition) && !x && !y) XConfigureWindow(
-		ev->display, ev->window, CWX | CWY, &(XWindowChanges){
-			.x = (root.width - width) / 2,
-			.y = (root.height - height) / 2
-		}
+	if (!(hints.flags & PPosition) && !x && !y) XMoveWindow(
+		ev->display, ev->window,
+		(root.width - width) / 2, (root.height - height) / 2
 	);
 	XMapWindow(ev->display, ev->window);
 }
