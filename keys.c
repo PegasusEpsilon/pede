@@ -57,8 +57,7 @@ void handle_key_events (XEvent event) {
 		} else if (event.xkey.keycode == keycodes[KcXF86AudioMute]) {
 			if (!fork())
 				execlp(VOLUME_CONTROL, VOLUME_CONTROL, TOGGLE_MUTE, NULL);
-		} else
-			puts("caught unhandled keystroke, your KEY_EXPANDO list "
+		} else puts("caught unhandled keystroke, your KEY_EXPANDO list "
 				"is out of sync with keys.c");
 		break;
 	case KeyRelease:
@@ -71,6 +70,9 @@ void handle_key_events (XEvent event) {
 void hook_keys (Display *display, Window root) {
 #define KEY_EXPANDO(x) keycodes[Kc ## x] = XKeysymToKeycode(display, XStringToKeysym(keycode_names[Kc ## x]));
 #include "expandos.h"
+	XGrabKey(display, keycodes[KcXF86AudioRaiseVolume], None, root, True, GrabModeAsync, GrabModeAsync);
+	XGrabKey(display, keycodes[KcXF86AudioLowerVolume], None, root, True, GrabModeAsync, GrabModeAsync);
+	XGrabKey(display, keycodes[KcXF86AudioMute], None, root, True, GrabModeAsync, GrabModeAsync);
 	XGrabKey(display, keycodes[KcAlt_L], None, root, True, GrabModeAsync, GrabModeAsync);
 	XGrabKey(display, keycodes[KcTab], Mod1Mask, root, True, GrabModeAsync, GrabModeAsync);
 	XGrabKey(display, keycodes[KcTab], Mod1Mask | ShiftMask, root, True, GrabModeAsync, GrabModeAsync);

@@ -321,6 +321,8 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 		case UnmapNotify:
 		case ConfigureNotify:
 		case PropertyNotify:
+		case KeyRelease:
+		case KeyPress:
 			break;
 		default:
 			printf("UntrackedEvent%d\n", event.type);
