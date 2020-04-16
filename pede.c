@@ -213,7 +213,6 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 					*event.xclient.data.l);
 			break;
 		case MapRequest:
-			// FIXME: why do chromium --app=... windows not display?
 			map_window(&event.xmaprequest);
 			set_workspace(event.xmaprequest.window, active_workspace());
 			focus_window(event.xmaprequest.window);
