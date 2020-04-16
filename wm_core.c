@@ -180,7 +180,7 @@ void remove_state (Display *display, Window window, Atom state) {
 		return;
 	} else printf("Remove state %s from window 0x%08lx\n", state_name, window);
 
-	printf("enumerating %d extant states\n", count);
+	if (count) printf("Enumerating %d extant states\n", count);
 	for (unsigned long i = 0; i < count; i++) {
 		printf("state: %s\n", XGetAtomName(display, states[i]));
 		fflush(stdout);
@@ -218,8 +218,7 @@ void add_state (Display *display, Window window, Atom state) {
 		display, window, atom[_NET_WM_STATE], atom[ATOM], &count, VOID
 	);
 
-	printf("Enumerating %d existing states:\n", count);
-
+	if (count) printf("Enumerating %d existing states:\n", count);
 	for (unsigned long i = 0; i < count && states[i]; i--)
 		printf("%d: %s\n", i, XGetAtomName(display, states[i]));
 
