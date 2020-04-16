@@ -4,7 +4,7 @@
 ** Distribute Unmodified - https://pegasus.pimpninjas.org/license
 */
 
-#include <X11/Xlib.h>
+#include <X11/Xutil.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -285,8 +285,13 @@ void map_window (XMapRequestEvent *ev) {
 	XGetGeometry(ev->display, ev->window, VOID,
 		&x, &y, &width, &height, VOID, VOID);
 
-	if (0 == x && 0 == y) XConfigureWindow(ev->display, ev->window, CWX | CWY,
-		&(XWindowChanges){
+	XSizeHints hints;
+	XGetWMSizeHints(
+		ev->display, ev->window, &hints, VOID, atom[WM_NORMAL_HINTS]
+	);
+
+	if (!(hints.flags & PPosition) && !x && !y) XConfigureWindow(
+		ev->display, ev->window, CWX | CWY, &(XWindowChanges){
 			.x = (root.width - width) / 2,
 			.y = (root.height - height) / 2
 		}
