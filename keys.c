@@ -22,9 +22,15 @@ void handle_key_events (XEvent event) {
 	case KeyPress:
 		// stupid C rules about switch blocks requiring integer constants...
 		if (event.xkey.keycode == keycodes[KcRight]) {
-			activate_workspace((active_workspace() + 1) % 4);
+			int workspace = (1 + active_workspace()) % 4;
+			if (event.xkey.state & ShiftMask)
+				set_workspace(active_window(), workspace);
+			activate_workspace(workspace);
 		} else if (event.xkey.keycode == keycodes[KcLeft]) {
-			activate_workspace((active_workspace() + 3) % 4);
+			int workspace = (3 + active_workspace()) % 4;
+			if (event.xkey.state & ShiftMask)
+				set_workspace(active_window(), workspace);
+			activate_workspace(workspace);
 		} else if (event.xkey.keycode == keycodes[KcTab]) {//do {
 			// TODO: change this to manually select and raise
 			// the bottom window or lower the top window
@@ -73,31 +79,38 @@ void handle_key_events (XEvent event) {
 	}
 }
 
-static void numlock_doesnt_matter (int kc, unsigned mod) {
+static void numlock_ignoring_hook (int kc, unsigned mod) {
 	XGrabKey(display, kc, Mod2Mask | mod, root.handle, True, GrabModeAsync, GrabModeAsync);
 	XGrabKey(display, kc,            mod, root.handle, True, GrabModeAsync, GrabModeAsync);
+}
+
+void unhook_keys(void) {
+#define KEY_EXPANDO(x) XUngrabKey(display, keycodes[Kc ## x], AnyModifier, root.handle);
+#include "expandos.h"
 }
 
 void hook_keys (void) {
 #define KEY_EXPANDO(x) keycodes[Kc ## x] = XKeysymToKeycode(display, XStringToKeysym(keycode_names[Kc ## x]));
 #include "expandos.h"
 
-	numlock_doesnt_matter(keycodes[KcXF86AudioRaiseVolume], None);
-	numlock_doesnt_matter(keycodes[KcXF86AudioLowerVolume], None);
-	numlock_doesnt_matter(keycodes[KcXF86AudioMute], None);
-	numlock_doesnt_matter(keycodes[KcAlt_L], None);
-	numlock_doesnt_matter(keycodes[KcRight], Mod4Mask);
-	numlock_doesnt_matter(keycodes[KcLeft], Mod4Mask);
-	numlock_doesnt_matter(keycodes[KcTab], Mod1Mask | ShiftMask);
-	numlock_doesnt_matter(keycodes[KcTab], Mod1Mask);
-	numlock_doesnt_matter(keycodes[KcF4], Mod1Mask);
-	numlock_doesnt_matter(keycodes[KcR], Mod4Mask);
-	numlock_doesnt_matter(keycodes[Kc1], Mod4Mask | ShiftMask);
-	numlock_doesnt_matter(keycodes[Kc2], Mod4Mask | ShiftMask);
-	numlock_doesnt_matter(keycodes[Kc3], Mod4Mask | ShiftMask);
-	numlock_doesnt_matter(keycodes[Kc4], Mod4Mask | ShiftMask);
-	numlock_doesnt_matter(keycodes[Kc1], Mod4Mask);
-	numlock_doesnt_matter(keycodes[Kc2], Mod4Mask);
-	numlock_doesnt_matter(keycodes[Kc3], Mod4Mask);
-	numlock_doesnt_matter(keycodes[Kc4], Mod4Mask);
+	numlock_ignoring_hook(keycodes[KcXF86AudioRaiseVolume], None);
+	numlock_ignoring_hook(keycodes[KcXF86AudioLowerVolume], None);
+	numlock_ignoring_hook(keycodes[KcXF86AudioMute], None);
+	numlock_ignoring_hook(keycodes[KcAlt_L], None);
+	numlock_ignoring_hook(keycodes[KcRight], Mod4Mask | ShiftMask);
+	numlock_ignoring_hook(keycodes[KcLeft], Mod4Mask | ShiftMask);
+	numlock_ignoring_hook(keycodes[KcRight], Mod4Mask);
+	numlock_ignoring_hook(keycodes[KcLeft], Mod4Mask);
+	numlock_ignoring_hook(keycodes[KcTab], Mod1Mask | ShiftMask);
+	numlock_ignoring_hook(keycodes[KcTab], Mod1Mask);
+	numlock_ignoring_hook(keycodes[KcF4], Mod1Mask);
+	numlock_ignoring_hook(keycodes[KcR], Mod4Mask);
+	numlock_ignoring_hook(keycodes[Kc1], Mod4Mask | ShiftMask);
+	numlock_ignoring_hook(keycodes[Kc2], Mod4Mask | ShiftMask);
+	numlock_ignoring_hook(keycodes[Kc3], Mod4Mask | ShiftMask);
+	numlock_ignoring_hook(keycodes[Kc4], Mod4Mask | ShiftMask);
+	numlock_ignoring_hook(keycodes[Kc1], Mod4Mask);
+	numlock_ignoring_hook(keycodes[Kc2], Mod4Mask);
+	numlock_ignoring_hook(keycodes[Kc3], Mod4Mask);
+	numlock_ignoring_hook(keycodes[Kc4], Mod4Mask);
 }

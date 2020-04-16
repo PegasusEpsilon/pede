@@ -54,8 +54,9 @@ void focus_window (Window window) {
 }
 
 void focus_active_window (void) {
+	XLowerWindow(display, pede);
 	Window active = active_window();
-	if (0 == active) return;
+	if (pede == active || 0 == active) return;
 	focus_window(active);
 }
 
@@ -86,6 +87,7 @@ void activate_workspace (const uint32_t which) {
 
 	XFree(windows);
 
+	XRaiseWindow(display, active_window());
 	focus_active_window();
 }
 

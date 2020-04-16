@@ -475,6 +475,8 @@ int main (int argc, char **argv, char **envp) {
 	// show all windows
 	activate_workspace((uint32_t)-1);
 
+	unhook_keys();
+
 	XDestroyImage(img);
 	XFreeGC(display, gc);
 	XDestroyWindow(display, pede);

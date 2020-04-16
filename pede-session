@@ -13,16 +13,17 @@ export XAUTHORITY=$HOME/.Xauthority
 pushd $HOME
 
 # configure X itself
-hsetroot -center $WALLPAPER &
-xsetroot -cursor_name arrow &
-xset -dpms s off &
+/usr/bin/hsetroot -center $WALLPAPER &
+/usr/bin/xsetroot -cursor_name arrow &
+/usr/bin/xset -dpms s off &
 
 # start some daemons
 /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1 &
 /usr/bin/start-pulseaudio-x11 &
+/usr/bin/ibus-daemon --xim &
 /usr/bin/xcompmgr &
-xbanish &
-ibus-daemon --xim &
+/usr/bin/numlockx &
+/usr/bin/xbanish &
 
 # start pede
 rm $PEDE_DIRECTORY/stopping
