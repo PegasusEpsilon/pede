@@ -71,23 +71,29 @@ void handle_key_events (XEvent event) {
 	}
 }
 
-void hook_keys (Display *display, Window root) {
+static void numlock_doesnt_matter (int kc, unsigned mod) {
+	XGrabKey(display, kc, Mod2Mask | mod, root.handle, True, GrabModeAsync, GrabModeAsync);
+	XGrabKey(display, kc,            mod, root.handle, True, GrabModeAsync, GrabModeAsync);
+}
+
+void hook_keys (void) {
 #define KEY_EXPANDO(x) keycodes[Kc ## x] = XKeysymToKeycode(display, XStringToKeysym(keycode_names[Kc ## x]));
 #include "expandos.h"
-	XGrabKey(display, keycodes[KcXF86AudioRaiseVolume], None, root, True, GrabModeAsync, GrabModeAsync);
-	XGrabKey(display, keycodes[KcXF86AudioLowerVolume], None, root, True, GrabModeAsync, GrabModeAsync);
-	XGrabKey(display, keycodes[KcXF86AudioMute], None, root, True, GrabModeAsync, GrabModeAsync);
-	XGrabKey(display, keycodes[KcAlt_L], None, root, True, GrabModeAsync, GrabModeAsync);
-	XGrabKey(display, keycodes[KcTab], Mod1Mask, root, True, GrabModeAsync, GrabModeAsync);
-	XGrabKey(display, keycodes[KcTab], Mod1Mask | ShiftMask, root, True, GrabModeAsync, GrabModeAsync);
-	XGrabKey(display, keycodes[KcF4], Mod1Mask, root, True, GrabModeAsync, GrabModeAsync);
-	XGrabKey(display, keycodes[KcR], Mod4Mask, root, True, GrabModeAsync, GrabModeAsync);
-	XGrabKey(display, keycodes[Kc1], Mod4Mask, root, True, GrabModeAsync, GrabModeAsync);
-	XGrabKey(display, keycodes[Kc2], Mod4Mask, root, True, GrabModeAsync, GrabModeAsync);
-	XGrabKey(display, keycodes[Kc3], Mod4Mask, root, True, GrabModeAsync, GrabModeAsync);
-	XGrabKey(display, keycodes[Kc4], Mod4Mask, root, True, GrabModeAsync, GrabModeAsync);
-	XGrabKey(display, keycodes[Kc1], Mod4Mask | ShiftMask, root, True, GrabModeAsync, GrabModeAsync);
-	XGrabKey(display, keycodes[Kc2], Mod4Mask | ShiftMask, root, True, GrabModeAsync, GrabModeAsync);
-	XGrabKey(display, keycodes[Kc3], Mod4Mask | ShiftMask, root, True, GrabModeAsync, GrabModeAsync);
-	XGrabKey(display, keycodes[Kc4], Mod4Mask | ShiftMask, root, True, GrabModeAsync, GrabModeAsync);
+
+	numlock_doesnt_matter(keycodes[KcXF86AudioRaiseVolume], None);
+	numlock_doesnt_matter(keycodes[KcXF86AudioLowerVolume], None);
+	numlock_doesnt_matter(keycodes[KcXF86AudioMute], None);
+	numlock_doesnt_matter(keycodes[KcAlt_L], None);
+	numlock_doesnt_matter(keycodes[KcTab], Mod1Mask | ShiftMask);
+	numlock_doesnt_matter(keycodes[KcTab], Mod1Mask);
+	numlock_doesnt_matter(keycodes[KcF4], Mod1Mask);
+	numlock_doesnt_matter(keycodes[KcR], Mod4Mask);
+	numlock_doesnt_matter(keycodes[Kc1], Mod4Mask | ShiftMask);
+	numlock_doesnt_matter(keycodes[Kc2], Mod4Mask | ShiftMask);
+	numlock_doesnt_matter(keycodes[Kc3], Mod4Mask | ShiftMask);
+	numlock_doesnt_matter(keycodes[Kc4], Mod4Mask | ShiftMask);
+	numlock_doesnt_matter(keycodes[Kc1], Mod4Mask);
+	numlock_doesnt_matter(keycodes[Kc2], Mod4Mask);
+	numlock_doesnt_matter(keycodes[Kc3], Mod4Mask);
+	numlock_doesnt_matter(keycodes[Kc4], Mod4Mask);
 }

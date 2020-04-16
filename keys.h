@@ -2,6 +2,6 @@
 #define KEYS_H
 
 void handle_key_events (XEvent);
-void hook_keys (Display *, Window);
+void hook_keys (void);
 
 #endif // KEYS_H

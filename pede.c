@@ -228,8 +228,8 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 			XSetInputFocus(display, event.xbutton.subwindow,
 				RevertToParent, event.xbutton.time);
 			dragStart = event.xbutton;
-			if (0 == dragStart.state
-				&& 9 != dragStart.button) {
+			if (!(dragStart.state & ~Mod2Mask)) {
+				// && 9 != dragStart.button
 				XAllowEvents(display, ReplayPointer, event.xbutton.time);
 				break;
 			}
@@ -343,7 +343,13 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 			printf("UntrackedEvent%d\n", event.type);
 		}
 	};
+}
 
+static void numlock_doesnt_matter (unsigned btn, unsigned mod) {
+	XGrabButton(display, btn,            mod, root.handle, True,
+			ButtonPressMask, GrabModeSync, GrabModeSync, None, None);
+	XGrabButton(display, btn, Mod2Mask | mod, root.handle, True,
+			ButtonPressMask, GrabModeSync, GrabModeSync, None, None);
 }
 
 int main (int argc, char **argv, char **envp) {
@@ -452,19 +458,16 @@ int main (int argc, char **argv, char **envp) {
 //		| PropertyChangeMask // PropertyNotify
 	);
 
-	hook_keys(display, root.handle);
+	hook_keys();
 
+	// button9 is my thumb button - just in case
+	//numlock_doesnt_matter(9, None);
 	// left click = raise window
-	XGrabButton(display, 1, 0, root.handle, True, ButtonPressMask,
-			GrabModeSync, GrabModeSync, None, None);
+	numlock_doesnt_matter(Button1, None);
 	// super+left = move window
-	XGrabButton(display, 9, 0, root.handle, True, ButtonPressMask,
-			GrabModeAsync, GrabModeAsync, None, None);
-	XGrabButton(display, 1, Mod4Mask, root.handle, True, ButtonPressMask,
-			GrabModeAsync, GrabModeAsync, None, None);
+	numlock_doesnt_matter(Button1, Mod4Mask);
 	// super+right = resize window
-	XGrabButton(display, 3, Mod4Mask, root.handle, True, ButtonPressMask,
-			GrabModeAsync, GrabModeAsync, None, None);
+	numlock_doesnt_matter(Button3, Mod4Mask);
 
 	activate_workspace(display, active_workspace(display));
 	XMapWindow(display, pede);
