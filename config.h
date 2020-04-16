@@ -20,6 +20,16 @@
 #define RUNNER "xfrun4"
 #define RUNNERARGS "--disable-server"
 
+// VOLUME_CONTROL should be the name of the program you want to use
+// to control your system volume. Good examples are pactl or amixer
+#define VOLUME_CONTROL "pactl"
+
+// RAISE_VOLUME, LOWER_VOLUME, and TOGGLE_MUTE should be the required
+// arguments to pass to VOLUME_CONTROL that do what they say.
+#define RAISE_VOLUME "set-sink-volume", "@DEFAULT_SINK@", "+5%"
+#define LOWER_VOLUME "set-sink-volume", "@DEFAULT_SINK@", "-5%"
+#define TOGGLE_MUTE "set-sink-mute", "@DEFAULT_SINK@", "toggle"
+
 // minimum window size (height and width) - do not go below 1
 #define MINIMUM_SIZE 100
 // snap distance, 0 to disable

@@ -16,4 +16,4 @@ extern Atom atom[ATOMS_LENGTH];
 
 void shutdown_atom_cache (void);
 void initialize_atom_cache (Display *display, char **envp);
-#endif /* ATOMS_H */
+#endif // ATOMS_H

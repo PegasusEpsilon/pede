@@ -19,9 +19,12 @@
 #include <sys/select.h>	// fd_set, pipe(), FD_SET(), FD_ZERO(), select()
 #include <time.h>   	// nanosleep()
 
+#include "wm.h"
+#include "keys.h"
 #include "atoms.h"
 #include "events.h"
 #include "signal_events.h"
+#include "config.h"
 
 // TODO: break everything out into modules, then write:
 // inter-window snapping/gluing, generalized keyboard shortcuts
@@ -29,29 +32,7 @@
 // vastly improve ICCCM and EWMH support...
 // tiling module? windows 10-style edge tiling?
 
-// desktop button
-#define FILENAME "power.icon"
-#define BPP 32
-#define HEIGHT 32
-#define WIDTH 32
-#define BOTTOM 0
-#define LEFT 0
-
-// RUNNERARGS should be comma-separated and individually quoted ie:
-//#define RUNNERARGS "arg1", "arg2", "arg3"
-#define RUNNER "xfrun4"
-#define RUNNERARGS "--disable-server"
-
-// minimum window size (height and width) - do not go below 1
-#define MINIMUM_SIZE 100
-// snap distance, 0 to disable
-#define SNAP 25
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
-
-static long long nul;
-#define VOID ((void *)&nul)
-static Window pede = 0;
-static struct { Window handle; unsigned int width, height; } root;
 
 #ifdef DEBUG
 static int (*saved_XChangeProperty)(Display *, Window, Atom, Atom, int, int,
@@ -68,300 +49,12 @@ int debug_XChangeProperty (Display *display, Window w, Atom property,
 #define XChangeProperty debug_XChangeProperty
 #endif
 
-#define BUFFER_LENGTH 512
-char buffer[BUFFER_LENGTH];
 int death_proof (Display *display, XErrorEvent *error) {
 	XGetErrorText(display, error->error_code, buffer, BUFFER_LENGTH-1);
 	printf("X request %d: Error %d/%d.%d: %s\n", error->serial, error->error_code,
 		error->request_code, error->minor_code, buffer);
 	fflush(stdout);
 	return 0;
-}
-
-unsigned char active_workspace (Display *display) {
-	Atom ret_type;
-	int ret_format;
-	unsigned long ret_nitems, ret_bytes_after;
-	uint32_t *ret_workspace = NULL;
-	XGetWindowProperty(display, root.handle, atom[_NET_CURRENT_DESKTOP], 0,
-		BUFFER_LENGTH, False, atom[CARDINAL], &ret_type, &ret_format,
-		&ret_nitems, &ret_bytes_after, (void *)&ret_workspace);
-	return ret_workspace ? *ret_workspace: 0;
-}
-
-Window active_window (Display *display) {
-	Window ret_root, ret_parent, *list;
-	unsigned count;
-	XWindowAttributes attrs;
-
-	XQueryTree(display, root.handle, &ret_root, &ret_parent, &list, &count);
-	for (int i = count; i && list[--i];) {
-		XGetWindowAttributes(display, list[i], &attrs);
-		// Setting focus on withdrawn/iconified windows is an error.
-		// Always consider them inactive.
-		if (IsViewable == attrs.map_state) return list[i];
-	}
-	return None;
-}
-
-void focus_window (Display *display, Window window) {
-	XSetInputFocus(display, window, RevertToParent, CurrentTime);
-	XChangeProperty(display, root.handle, atom[_NET_ACTIVE_WINDOW],
-		atom[WINDOW], 32, PropModeReplace, (void *)&window, 1);
-}
-
-void focus_active_window (Display *display) {
-	Window active = active_window(display);
-	printf("focusing window 0x%08lx\n", active);
-	focus_window(display, active);
-}
-
-void activate_workspace (Display *display, const uint32_t which) {
-	Window *windows = NULL;
-	unsigned int count;
-
-	//printf("activate workspace %d\n", which);
-	if ((uint32_t)-1 != which)
-		XChangeProperty(display, root.handle, atom[_NET_CURRENT_DESKTOP],
-			atom[CARDINAL], 32, PropModeReplace, (void *)&which, 1);
-
-	if (!XQueryTree(display, root.handle, VOID, VOID, &windows,
-		&count)) return;
-
-	uint32_t *workspace = NULL;
-	for (int i = 0; i < count; i++) {
-		XGetWindowProperty(display, windows[i], atom[_NET_WM_DESKTOP], 0,
-			BUFFER_LENGTH, False, atom[CARDINAL], VOID, VOID, VOID, VOID,
-			(void *)&workspace);
-		if (!workspace) continue;
-		if (which == *workspace
-			|| (uint32_t)-1 == *workspace
-			|| (uint32_t)-1 == which)
-			XMapWindow(display, windows[i]);
-		else XUnmapWindow(display, windows[i]);
-		XFree(workspace);
-	}
-
-	XFree(windows);
-
-	focus_active_window(display);
-}
-
-void set_workspace (Display *display, Window window, uint32_t workspace) {
-	XChangeProperty(display, window, atom[_NET_WM_DESKTOP], atom[CARDINAL],
-		32, PropModeReplace, (void *)&workspace, 1);
-	activate_workspace(display, active_workspace(display));
-}
-
-unsigned long XDeleteAtomFromArray (
-	Atom *array, unsigned long length, Atom element
-) {
-	unsigned long dst = 0;
-	for (unsigned long src = 0; src < length; src++, dst++) {
-		while (src < length && array[src] == element) src++;
-		if (src != dst) array[dst] = array[src];
-	}
-	return dst;
-}
-
-void *XGetWindowPropertyArray (
-	Display *display, Window window, Atom property,
-	Atom type, unsigned long *count
-) {
-
-	Atom ret_type;
-	void *data;
-	int bits;
-	unsigned long size;
-
-	XGetWindowProperty(display, window, property, 0, 0, False, type, &ret_type,
-		&bits, VOID, &size, (void *)&data);
-	XFree(data);
-	if (type != ret_type) return (void *)(*count = 0);
-	*count = size * 8 / bits;
-	XGetWindowProperty(display, window, property, 0, *count, False, type,
-		VOID, VOID, count, VOID, (void *)&data);
-
-	return data;
-}
-
-Bool XWindowPropertyArrayContains (
-	Display *display, Window window, Atom haystack, Atom needle
-) {
-	unsigned long i;
-	Atom *data = XGetWindowPropertyArray(display, window, haystack,
-		atom[ATOM], &i);
-	while (i--)
-		if (needle == data[i]) {
-			free(data);
-			return True;
-		}
-	return False;
-}
-
-void close_window (Display *display, Window window) {
-	if (XWindowPropertyArrayContains(
-		display, window, atom[WM_PROTOCOLS], atom[WM_DELETE_WINDOW]
-	)) XSendEvent(
-		display, window, False, NoEventMask, (XEvent *)&(XClientMessageEvent){
-			.type = ClientMessage, .display = display,
-			.window = window, .message_type = atom[WM_PROTOCOLS],
-			.format = 32, .data.l = { atom[WM_DELETE_WINDOW] }
-		}
-	);
-	//else XKillClient(display, window);
-	else XDestroyWindow(display, window);
-}
-
-void remove_state (Display *display, Window window, Atom state) {
-	Atom *data;
-	unsigned long i;
-
-	char *state_name = XGetAtomName(display, state);
-	//printf("Remove state %s from window %d\n", state_name, window);
-
-	data = XGetWindowPropertyArray(display, window,
-		atom[_NET_WM_STATE], atom[ATOM], &i);
-	if (!i) {
-		printf("Can't remove %s from window %d because it has no"
-			" _NET_WM_STATEs.\n", state_name, window);
-		return;
-	}
-	XFree(state_name);
-
-	unsigned long new_i = XDeleteAtomFromArray(data, i, state);
-	if (new_i != i) {
-		if (new_i) XChangeProperty(display, window, atom[_NET_WM_STATE],
-			atom[ATOM], 32, PropModeReplace, (void *)&data, new_i);
-		else XDeleteProperty(display, window, atom[_NET_WM_STATE]);
-	}
-
-	XFree(data);
-}
-
-void add_state (Display *display, Window window, Atom state) {
-	Atom states[32] = { 0 };
-	unsigned long count;
-
-	printf("Add state %s to window %d\n", XGetAtomName(display, state), window);
-
-	// FIXME: state _NET_WM_STATE_FULLSCREEN = "please maximize me"
-
-	XGetWindowProperty(display, window, atom[_NET_WM_STATE], 0, 0, False,
-		atom[ATOM], VOID, VOID, &count, VOID, (void *)&states);
-
-	printf("Enumerating %d existing states:\n", count);
-
-	for (unsigned long i = count; i && states[--i]; ) {
-		printf("%s\n", XGetAtomName(display, states[i]));
-	}
-	states[count] = state;
-	XChangeProperty(display, window, atom[_NET_WM_STATE], atom[ATOM], 32,
-		PropModeReplace, (void *)&states, count + 1);
-}
-
-void alter_window_state (XClientMessageEvent event) {
-	switch (event.data.l[0]) {
-		case 0:
-			remove_state(event.display, event.window, event.data.l[1]);
-			if (event.data.l[2])
-				remove_state(event.display, event.window, event.data.l[2]);
-		break;
-		case 1:
-			add_state(event.display, event.window, event.data.l[1]);
-			if (event.data.l[2])
-				add_state(event.display, event.window, event.data.l[2]);
-		break;
-		case 2:
-			if (XWindowPropertyArrayContains(event.display, event.window,
-				atom[_NET_WM_STATE], event.data.l[1]))
-				remove_state(event.display, event.window, event.data.l[1]);
-			else add_state(event.display, event.window, event.data.l[1]);
-			if (event.data.l[2]) {
-				if (XWindowPropertyArrayContains(event.display,
-					event.window, atom[_NET_WM_STATE], event.data.l[2]))
-					remove_state(event.display, event.window, event.data.l[2]);
-				else add_state(event.display, event.window, event.data.l[2]);
-			}
-		break;
-	}
-}
-
-void maximize_window (Display *display, Window window) {
-	// FIXME: _NET_WM_STATE_FULLSCREEN
-	// still trying to figure out wtf to do here...
-	int x, y;
-	unsigned int w, h;
-	XGetGeometry(display, window, NULL, &x, &y, &w, &h, NULL, NULL);
-	XChangeProperty(display, window,
-		XInternAtom(display, "WM_RESTORE_TOP", False), atom[CARDINAL], 32,
-		PropModeReplace, (void *)&y, 1);
-	XChangeProperty(display, window,
-		XInternAtom(display, "WM_RESTORE_TOP", False), atom[CARDINAL], 32,
-		PropModeReplace, (void *)&y, 1);
-	XChangeProperty(display, window,
-		XInternAtom(display, "WM_RESTORE_LEFT", False), atom[CARDINAL], 32,
-		PropModeReplace, (void *)&x, 1);
-	XChangeProperty(display, window,
-		XInternAtom(display, "WM_RESTORE_HEIGHT", False), atom[CARDINAL], 32,
-		PropModeReplace, (void *)&h, 1);
-	XChangeProperty(display, window,
-		XInternAtom(display, "WM_RESTORE_WIDTH", False), atom[CARDINAL], 32,
-		PropModeReplace, (void *)&w, 1);
-}
-
-void refuse_selection_request (XSelectionRequestEvent request) {
-	// NB: ICCCM § Responsibilities of the Selection Owner
-	XSelectionEvent reply = {
-		.type = SelectionNotify,
-		.serial = request.serial,
-		.send_event = True,
-		.display = request.display,
-		.requestor = request.requestor,
-		.selection = request.selection,
-		.target = request.target,
-		.property = None, // refused
-		.time = request.time
-	};
-	XSendEvent(request.display, request.requestor, False, NoEventMask,
-		(XEvent *)&reply);
-}
-
-void become_wm_unsafe (Display *display, Window WM) {
-	XSetSelectionOwner(display, atom[WM_Sn], WM, CurrentTime);
-	XSync(display, True);
-	if (pede != XGetSelectionOwner(display, atom[WM_Sn])) {
-		puts("Failed to acquire window manager status.");
-		exit(1);
-	}
-}
-void become_wm (Display *display, Window WM) {
-	Window old_wm = XGetSelectionOwner(display, atom[WM_Sn]);
-	if (old_wm) { // If there is a previous window manager
-		// Subscribe to window destruction notifications
-		XSelectInput(display, root.handle, SubstructureNotifyMask);
-		//XSelectInput(display, old_wm, SubstructureNotifyMask);
-		// Take over the job of window manager
-		/* from ICCCM:
-		** Clients attempting to acquire a selection must set the time value of
-		** the SetSelectionOwner request to the timestamp of the event
-		** triggering the acquisition attempt, not to CurrentTime. A
-		** zero-length append to a property is a way to obtain a timestamp for
-		** this purpose; the timestamp is in the corresponding PropertyNotify
-		** event.
-		** ...but this is the originating event, so... ?
-		*/
-		puts("Taking over window manager duties...");
-		fflush(stdout);
-		become_wm_unsafe(display, WM);
-		puts("Waiting for old window manager to exit...");
-		fflush(stdout);
-		// Wait for old WM window to be destroyed
-		XEvent event;
-		do XNextEvent(display, &event);
-		while (event.type != DestroyNotify);
-		puts("Look at me. I'm the window manager now.");
-	} else become_wm_unsafe(display, WM);
 }
 
 void set_window_name (Display *display, Window w, char *name) {
@@ -407,32 +100,6 @@ XImage *load_image (Display *display, int screen, Visual *visual, char *filename
 		(void *)data, WIDTH, HEIGHT, BPP, WIDTH * sizeof(PIXEL));
 }
 
-void map_window (XMapRequestEvent *ev) {
-	unsigned width, height;
-	unsigned long count;
-	unsigned char *workspace;
-
-	XGetWindowProperty(ev->display, ev->window, atom[_NET_WM_DESKTOP], 0,
-		BUFFER_LENGTH, False, atom[CARDINAL], VOID, VOID, &count, VOID, &workspace);
-	if (count) {
-		printf("window 0x%08lx is apparently already on workspace %d\n", ev->window, *workspace);
-		return;
-	}
-	set_workspace(ev->display, ev->window, active_workspace(ev->display));
-
-	int x, y;
-	XGetGeometry(ev->display, ev->window, VOID,
-		&x, &y, &width, &height, VOID, VOID);
-
-	if (0 == x && 0 == y) XConfigureWindow(ev->display, ev->window, CWX | CWY,
-		&(XWindowChanges){
-			.x = (root.width - width) / 2,
-			.y = (root.height - height) / 2
-		}
-	);
-	XMapWindow(ev->display, ev->window);
-}
-
 char *argv0 = NULL;
 bool signal_handler (void) {
 	printf("received signal %d\n", which_signal);
@@ -460,13 +127,6 @@ void XWaitEvent (Display *display) {
 	}
 }
 
-typedef enum { KcAltL, KcTab, KcF4, KcR, Kc1, Kc2, Kc3, Kc4, Kc_LAST } WatchedKeyCode;
-KeyCode keycodes[Kc_LAST];
-char *keycode_names[] = {
-	[KcAltL] = "Alt_L", [KcTab] = "Tab", [KcF4] = "F4", [KcR] = "R",
-	[Kc1] = "1", [Kc2] = "2", [Kc3] = "3", [Kc4] = "4",
-};
-
 void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 	XEvent event;
 	XWindowAttributes attrStart;
@@ -477,6 +137,7 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 		if (!XPending(display)) return;
 		XNextEvent(display, &event);
 		printf("event %s next request %d\n", event_names[event.type], XNextRequest(display)); fflush(stdout);
+		handle_key_events(event);
 		switch (event.type) {
 		case MapNotify:
 			if (event.xmaprequest.window == pede) {
@@ -540,37 +201,6 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 			if (event.xselectionclear.selection == atom[WM_Sn]) {
 				puts("Lost window manager status, cleaning up...");
 				return;
-			}
-			break;
-		case KeyPress:
-			// stupid C rules about switch blocks requiring integer constants...
-			if (event.xkey.keycode == keycodes[KcTab]) {//do {
-				// TODO: change this to manually select and raise
-				// the bottom window or lower the top window
-				XCirculateSubwindows(event.xkey.display, event.xkey.root,
-					event.xkey.state & Mod1Mask ? LowerHighest : RaiseLowest);
-			}// while (active_window(event.xkey.display) == pede);
-			else if (event.xkey.keycode == keycodes[KcR]) {
-				if (!fork()) execlp(RUNNER, RUNNER, RUNNERARGS);
-			} else if (event.xkey.keycode == keycodes[KcF4])
-				close_window(event.xkey.display,
-					active_window(event.xkey.display));
-			else if (event.xkey.keycode == keycodes[Kc1]) {
-				if (event.xkey.state & ShiftMask)
-					set_workspace(event.xkey.display, active_window(event.xkey.display), 0);
-				else activate_workspace(event.xkey.display, 0);
-			} else if (event.xkey.keycode == keycodes[Kc2]) {
-				if (event.xkey.state & ShiftMask)
-					set_workspace(event.xkey.display, active_window(event.xkey.display), 1);
-				else activate_workspace(event.xkey.display, 1);
-			} else if (event.xkey.keycode == keycodes[Kc3]) {
-				if (event.xkey.state & ShiftMask)
-					set_workspace(event.xkey.display, active_window(event.xkey.display), 2);
-				else activate_workspace(event.xkey.display, 2);
-			} else if (event.xkey.keycode == keycodes[Kc4]) {
-				if (event.xkey.state & ShiftMask)
-					set_workspace(event.xkey.display, active_window(event.xkey.display), 3);
-				else activate_workspace(event.xkey.display, 3);
 			}
 			break;
 		case ButtonPress:
@@ -685,10 +315,6 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 			break;
 		case ButtonRelease:
 			XUngrabPointer(display, event.xbutton.time);
-			break;
-		case KeyRelease:
-			if (keycodes[KcAltL] == event.xkey.keycode)
-				XLowerWindow(event.xkey.display, pede);
 			break;
 		case MappingNotify: // display start menu?
 		case CreateNotify: // fall through
@@ -810,27 +436,7 @@ int main (int argc, char **argv, char **envp) {
 //		| PropertyChangeMask // PropertyNotify
 	);
 
-	keycodes[KcAltL] = XKeysymToKeycode(display, XStringToKeysym(keycode_names[KcAltL]));
-	keycodes[KcTab] = XKeysymToKeycode(display, XStringToKeysym(keycode_names[KcTab]));
-	keycodes[KcF4] = XKeysymToKeycode(display, XStringToKeysym(keycode_names[KcF4]));
-	keycodes[KcR] = XKeysymToKeycode(display, XStringToKeysym(keycode_names[KcR]));
-	keycodes[Kc1] = XKeysymToKeycode(display, XStringToKeysym(keycode_names[Kc1]));
-	keycodes[Kc2] = XKeysymToKeycode(display, XStringToKeysym(keycode_names[Kc2]));
-	keycodes[Kc3] = XKeysymToKeycode(display, XStringToKeysym(keycode_names[Kc3]));
-	keycodes[Kc4] = XKeysymToKeycode(display, XStringToKeysym(keycode_names[Kc4]));
-	XGrabKey(display, keycodes[KcAltL], None, root.handle, True, GrabModeAsync, GrabModeAsync);
-	XGrabKey(display, keycodes[KcTab], Mod1Mask, root.handle, True, GrabModeAsync, GrabModeAsync);
-	XGrabKey(display, keycodes[KcTab], Mod1Mask | ShiftMask, root.handle, True, GrabModeAsync, GrabModeAsync);
-	XGrabKey(display, keycodes[KcF4], Mod1Mask, root.handle, True, GrabModeAsync, GrabModeAsync);
-	XGrabKey(display, keycodes[KcR], Mod4Mask, root.handle, True, GrabModeAsync, GrabModeAsync);
-	XGrabKey(display, keycodes[Kc1], Mod4Mask, root.handle, True, GrabModeAsync, GrabModeAsync);
-	XGrabKey(display, keycodes[Kc2], Mod4Mask, root.handle, True, GrabModeAsync, GrabModeAsync);
-	XGrabKey(display, keycodes[Kc3], Mod4Mask, root.handle, True, GrabModeAsync, GrabModeAsync);
-	XGrabKey(display, keycodes[Kc4], Mod4Mask, root.handle, True, GrabModeAsync, GrabModeAsync);
-	XGrabKey(display, keycodes[Kc1], Mod4Mask | ShiftMask, root.handle, True, GrabModeAsync, GrabModeAsync);
-	XGrabKey(display, keycodes[Kc2], Mod4Mask | ShiftMask, root.handle, True, GrabModeAsync, GrabModeAsync);
-	XGrabKey(display, keycodes[Kc3], Mod4Mask | ShiftMask, root.handle, True, GrabModeAsync, GrabModeAsync);
-	XGrabKey(display, keycodes[Kc4], Mod4Mask | ShiftMask, root.handle, True, GrabModeAsync, GrabModeAsync);
+	hook_keys(display, root.handle);
 
 	// left click = raise window
 	XGrabButton(display, 1, 0, root.handle, True, ButtonPressMask,

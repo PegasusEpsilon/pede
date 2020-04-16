@@ -28,7 +28,7 @@ void handle_key_events (XEvent event) {
 				event.xkey.state & Mod1Mask ? LowerHighest : RaiseLowest);
 		}// while (active_window(event.xkey.display) == pede);
 		else if (event.xkey.keycode == keycodes[KcR]) {
-			if (!fork()) execlp(RUNNER, RUNNER, RUNNERARGS);
+			if (!fork()) execlp(RUNNER, RUNNER, RUNNERARGS, NULL);
 		} else if (event.xkey.keycode == keycodes[KcF4])
 			close_window(event.xkey.display,
 				active_window(event.xkey.display));
@@ -48,7 +48,18 @@ void handle_key_events (XEvent event) {
 			if (event.xkey.state & ShiftMask)
 				set_workspace(event.xkey.display, active_window(event.xkey.display), 3);
 			else activate_workspace(event.xkey.display, 3);
-		}
+		} else if (event.xkey.keycode == keycodes[KcXF86AudioRaiseVolume]) {
+			if (!fork())
+				execlp(VOLUME_CONTROL, VOLUME_CONTROL, RAISE_VOLUME, NULL);
+		} else if (event.xkey.keycode == keycodes[KcXF86AudioLowerVolume]) {
+			if (!fork())
+				execlp(VOLUME_CONTROL, VOLUME_CONTROL, LOWER_VOLUME, NULL);
+		} else if (event.xkey.keycode == keycodes[KcXF86AudioMute]) {
+			if (!fork())
+				execlp(VOLUME_CONTROL, VOLUME_CONTROL, TOGGLE_MUTE, NULL);
+		} else
+			puts("caught unhandled keystroke, your KEY_EXPANDO list "
+				"is out of sync with keys.c");
 		break;
 	case KeyRelease:
 		if (keycodes[KcAlt_L] == event.xkey.keycode)
