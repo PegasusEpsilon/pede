@@ -107,7 +107,10 @@ bool signal_handler (void) {
 	switch (which_signal) {
 	case SIGINT:
 		puts("\nInterrupted.");
-		return true;
+		return True;
+	case SIGTERM:
+		puts("\nTerminated.");
+		return True;
 	case SIGUSR1:
 		execlp(argv0, argv0);
 		// we never get here anyway
@@ -115,7 +118,7 @@ bool signal_handler (void) {
 	return false;
 }
 
-void XWaitEvent (Display *display) {
+Bool XWaitEvent (Display *display) {
 	int Xfd = ConnectionNumber(display);
 	fd_set listen, pending;
 	FD_ZERO(&listen);
@@ -123,8 +126,9 @@ void XWaitEvent (Display *display) {
 	while (!XPending(display)) {
 		pending = listen;
 		if (0 >= select(FD_SETSIZE, &pending, NULL, NULL, NULL))
-			if (signal_handler()) return;
+			if (signal_handler()) return True;
 	}
+	return False;
 }
 
 void event_loop (Display *display, Window pede, GC gc, XImage *img) {
@@ -132,8 +136,7 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 	XWindowAttributes attrStart;
 	XButtonEvent dragStart = { 0 };
 	char moveSide = 0;
-	for (;;) { // ever
-		XWaitEvent(display);
+	while (!XWaitEvent(display)) {
 		if (!XPending(display)) return;
 		XNextEvent(display, &event);
 		printf("event %s next request %d\n", event_names[event.type], XNextRequest(display)); fflush(stdout);
