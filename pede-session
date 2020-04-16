@@ -13,11 +13,12 @@ export XAUTHORITY=$HOME/.Xauthority
 pushd $HOME
 
 # configure X itself
-xsetroot -cursor_name arrow &
 hsetroot -center $WALLPAPER &
+xsetroot -cursor_name arrow &
 xset -dpms s off &
 
 # start some daemons
+/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1 &
 /usr/bin/start-pulseaudio-x11 &
 /usr/bin/xcompmgr &
 xbanish &
