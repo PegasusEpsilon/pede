@@ -7,7 +7,7 @@ mousetrap. I think I'm doing a pretty decent job, honestly.
 
 - It does not reparent
 - It does not composite
-- It does not handle window maximization states (yet, it's on my TODO)
+- ~~It does not handle window maximization states (yet, it's on my TODO)~~ It does now!
 - It does not read any configuration files other than the power button image data
 - It does not draw any UI widgets other than its power button
   - No, not even a confirmation dialog when you click the button. Be careful.
@@ -20,12 +20,14 @@ This DE is not for the faint of heart. It is for the extreme minimalist.
 ## What *does* pede do, then?
 
 - It takes less than a megabyte of RAM, even with how fat linux has gotten
-- It positions windows
+- It positions windows. It positions windows ***well***.
 - It closes windows politely if they ask for politeness, rudely if they do not
 - It has workspaces
 - It lets you switch between workspaces (Super+[1234])
 - It lets you move windows between workspaces (Super+Shift+[1234])
 - It lets you move and resize windows with the mouse
+  - Super+left = move
+  - Super+right = resize
 - It lets you alt+tab (barely, I know, it's on my TODO)
 - It snaps windows to the edge of the screen (but not each other yet, also TODO)
 - It draws a compositor-friendly power button in a configurable location
@@ -37,8 +39,7 @@ This DE is not for the faint of heart. It is for the extreme minimalist.
 
 If you try pede, like it, work on it, whatever, let me know. I won't be
 accepting most pull requests, but I encourage you to make them anyway. If you
-make a change I like, I'll merge it. But know that the roadmap is in flux, and
-I currently hope to have a module loading system in this thing eventually, so
-the end user can actually reconfigure it in a slightly more sensible manner.
+make a change I like, I'll merge it. But know that the roadmap is in flux.
+
 
 Anyway, that's it. Go play with the code.
