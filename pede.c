@@ -181,10 +181,23 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 			// add or remove various states to _NET_WM_STATE properties
 			else if (event.xclient.message_type == atom[_NET_WM_STATE])
 				alter_window_state(event.xclient);
-			// idfk
-			else printf("Received unmonitored client message: %s/%d\n",
-				XGetAtomName(display, event.xclient.message_type),
-				*event.xclient.data.l);
+			// window requests focus
+			else if (event.xclient.message_type == atom[_NET_ACTIVE_WINDOW]) {
+				unsigned long count = 0;
+				unsigned char *prop = NULL;
+				XGetWindowProperty(event.xclient.display, event.xclient.window,
+					atom[_NET_WM_DESKTOP], 0, 1, False, atom[CARDINAL],
+					VOID, VOID, &count, VOID, &prop);
+				if (count) {
+					activate_workspace(event.xclient.display, *prop);
+					XRaiseWindow(event.xclient.display, event.xclient.window);
+					focus_active_window(event.xclient.display);
+				}
+				XFree(prop);
+			} else // idfk...
+				printf("Received unmonitored client message: %s/%d\n",
+					XGetAtomName(display, event.xclient.message_type),
+					*event.xclient.data.l);
 			break;
 		case MapRequest:
 			// FIXME: why do chromium --app=... windows not display?
