@@ -297,9 +297,12 @@ void map_window (XMapRequestEvent *ev) {
 		ev->display, ev->window, &hints, VOID, atom[WM_NORMAL_HINTS]
 	);
 
-	if (!(hints.flags & PPosition) && !x && !y) XMoveWindow(
+	if (
+		(!(hints.flags & PPosition) && !x && !y) || x + width > root.width ||
+		y + height > root.height || x < 0 || y < 0
+	) XMoveWindow(
 		ev->display, ev->window,
-		(root.width - width) / 2, (root.height - height) / 2
+		((int)root.width - width) / 2, ((int)root.height - height) / 2
 	);
 	XMapWindow(ev->display, ev->window);
 }
