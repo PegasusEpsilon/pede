@@ -140,8 +140,9 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 		if (!XPending(display)) return;
 		XNextEvent(display, &event);
 		printf("event %s next request %d\n", event_names[event.type], XNextRequest(display)); fflush(stdout);
-		handle_key_events(event);
-		switch (event.type) {
+		if (KeyPress == event.type || KeyRelease == event.type)
+			handle_key_events(event);
+		else switch (event.type) {
 		case MapNotify:
 			if (event.xmaprequest.window == pede) {
 				puts("I have arrived.");
@@ -174,12 +175,10 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 		case ClientMessage:
 			// switch to given workspace
 			if (event.xclient.message_type == atom[_NET_CURRENT_DESKTOP])
-				activate_workspace(event.xclient.display,
-					*event.xclient.data.l);
+				activate_workspace(*event.xclient.data.l);
 			// move window to given workspace
 			else if (event.xclient.message_type == atom[_NET_WM_DESKTOP])
-				set_workspace(event.xclient.display, event.xclient.window,
-					*event.xclient.data.l);
+				set_workspace(event.xclient.window, *event.xclient.data.l);
 			// add or remove various states to _NET_WM_STATE properties
 			else if (event.xclient.message_type == atom[_NET_WM_STATE])
 				alter_window_state(event.xclient);
@@ -191,9 +190,9 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 					atom[_NET_WM_DESKTOP], 0, 1, False, atom[CARDINAL],
 					VOID, VOID, &count, VOID, &prop);
 				if (count) {
-					activate_workspace(event.xclient.display, *prop);
+					activate_workspace(*prop);
 					XRaiseWindow(event.xclient.display, event.xclient.window);
-					focus_active_window(event.xclient.display);
+					focus_active_window();
 				}
 				XFree(prop);
 			} else // idfk...
@@ -204,13 +203,12 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 		case MapRequest:
 			// FIXME: why do chromium --app=... windows not display?
 			map_window(&event.xmaprequest);
-			set_workspace(event.xmaprequest.display, event.xmaprequest.window,
-				active_workspace(event.xmaprequest.display));
-			focus_window(event.xmaprequest.display, event.xmaprequest.window);
+			set_workspace(event.xmaprequest.window, active_workspace());
+			focus_window(event.xmaprequest.window);
 			break;
 		case DestroyNotify: // fall through
 		case CirculateNotify:
-			focus_active_window(event.xcirculate.display);
+			focus_active_window();
 			break;
 		case SelectionClear:
 			if (event.xselectionclear.selection == atom[WM_Sn]) {
@@ -336,8 +334,6 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 		case UnmapNotify:
 		case ConfigureNotify:
 		case PropertyNotify:
-		case KeyRelease:
-		case KeyPress:
 			break;
 		default:
 			printf("UntrackedEvent%d\n", event.type);
@@ -432,7 +428,7 @@ int main (int argc, char **argv, char **envp) {
 	// load_image frees the filename for us
 	// free(filename);
 
-	become_wm(display, pede);
+	make_wm(pede);
 
 	// set up root window
 	XChangeProperty(display, root.handle, atom[_NET_SUPPORTING_WM_CHECK],
@@ -469,7 +465,7 @@ int main (int argc, char **argv, char **envp) {
 	// super+right = resize window
 	numlock_doesnt_matter(Button3, Mod4Mask);
 
-	activate_workspace(display, active_workspace(display));
+	activate_workspace(active_workspace());
 	XMapWindow(display, pede);
 
 	// actually do the thing
@@ -477,7 +473,7 @@ int main (int argc, char **argv, char **envp) {
 	// done doing the thing, shut it down, shut it down forever
 
 	// show all windows
-	activate_workspace(display, (uint32_t)-1);
+	activate_workspace((uint32_t)-1);
 
 	XDestroyImage(img);
 	XFreeGC(display, gc);

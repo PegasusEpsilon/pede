@@ -21,33 +21,35 @@ void handle_key_events (XEvent event) {
 	switch(event.type) {
 	case KeyPress:
 		// stupid C rules about switch blocks requiring integer constants...
-		if (event.xkey.keycode == keycodes[KcTab]) {//do {
+		if (event.xkey.keycode == keycodes[KcRight]) {
+			activate_workspace((active_workspace() + 1) % 4);
+		} else if (event.xkey.keycode == keycodes[KcLeft]) {
+			activate_workspace((active_workspace() + 3) % 4);
+		} else if (event.xkey.keycode == keycodes[KcTab]) {//do {
 			// TODO: change this to manually select and raise
 			// the bottom window or lower the top window
 			XCirculateSubwindows(event.xkey.display, event.xkey.root,
 				event.xkey.state & Mod1Mask ? LowerHighest : RaiseLowest);
-		}// while (active_window(event.xkey.display) == pede);
-		else if (event.xkey.keycode == keycodes[KcR]) {
+		} else if (event.xkey.keycode == keycodes[KcR]) {
 			if (!fork()) execlp(RUNNER, RUNNER, RUNNERARGS, NULL);
-		} else if (event.xkey.keycode == keycodes[KcF4])
-			close_window(event.xkey.display,
-				active_window(event.xkey.display));
-		else if (event.xkey.keycode == keycodes[Kc1]) {
+		} else if (event.xkey.keycode == keycodes[KcF4]) {
+			close_window(active_window());
+		} else if (event.xkey.keycode == keycodes[Kc1]) {
 			if (event.xkey.state & ShiftMask)
-				set_workspace(event.xkey.display, active_window(event.xkey.display), 0);
-			else activate_workspace(event.xkey.display, 0);
+				set_workspace(active_window(), 0);
+			else activate_workspace(0);
 		} else if (event.xkey.keycode == keycodes[Kc2]) {
 			if (event.xkey.state & ShiftMask)
-				set_workspace(event.xkey.display, active_window(event.xkey.display), 1);
-			else activate_workspace(event.xkey.display, 1);
+				set_workspace(active_window(), 1);
+			else activate_workspace(1);
 		} else if (event.xkey.keycode == keycodes[Kc3]) {
 			if (event.xkey.state & ShiftMask)
-				set_workspace(event.xkey.display, active_window(event.xkey.display), 2);
-			else activate_workspace(event.xkey.display, 2);
+				set_workspace(active_window(), 2);
+			else activate_workspace(2);
 		} else if (event.xkey.keycode == keycodes[Kc4]) {
 			if (event.xkey.state & ShiftMask)
-				set_workspace(event.xkey.display, active_window(event.xkey.display), 3);
-			else activate_workspace(event.xkey.display, 3);
+				set_workspace(active_window(), 3);
+			else activate_workspace(3);
 		} else if (event.xkey.keycode == keycodes[KcXF86AudioRaiseVolume]) {
 			if (!fork())
 				execlp(VOLUME_CONTROL, VOLUME_CONTROL, RAISE_VOLUME, NULL);
@@ -84,6 +86,8 @@ void hook_keys (void) {
 	numlock_doesnt_matter(keycodes[KcXF86AudioLowerVolume], None);
 	numlock_doesnt_matter(keycodes[KcXF86AudioMute], None);
 	numlock_doesnt_matter(keycodes[KcAlt_L], None);
+	numlock_doesnt_matter(keycodes[KcRight], Mod4Mask);
+	numlock_doesnt_matter(keycodes[KcLeft], Mod4Mask);
 	numlock_doesnt_matter(keycodes[KcTab], Mod1Mask | ShiftMask);
 	numlock_doesnt_matter(keycodes[KcTab], Mod1Mask);
 	numlock_doesnt_matter(keycodes[KcF4], Mod1Mask);

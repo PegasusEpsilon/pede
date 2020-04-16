@@ -20,14 +20,14 @@ Display *display;
 struct { Window handle; unsigned int width, height; } root;
 Window pede;
 
-unsigned char active_workspace (Display *display) {
+unsigned char active_workspace (void) {
 	uint32_t *workspace = NULL;
 	XGetWindowProperty(display, root.handle, atom[_NET_CURRENT_DESKTOP], 0,
 		1, False, atom[CARDINAL], VOID, VOID, VOID, VOID, (void *)&workspace);
 	return workspace ? *workspace: 0;
 }
 
-Window active_window (Display *display) {
+Window active_window (void) {
 	Window *list;
 	Window active = None;
 	unsigned count = 0;
@@ -47,19 +47,19 @@ Window active_window (Display *display) {
 	return active;
 }
 
-void focus_window (Display *display, Window window) {
+void focus_window (Window window) {
 	XSetInputFocus(display, window, RevertToParent, CurrentTime);
 	XChangeProperty(display, root.handle, atom[_NET_ACTIVE_WINDOW],
 		atom[WINDOW], 32, PropModeReplace, (void *)&window, 1);
 }
 
-void focus_active_window (Display *display) {
-	Window active = active_window(display);
+void focus_active_window (void) {
+	Window active = active_window();
 	if (0 == active) return;
-	focus_window(display, active);
+	focus_window(active);
 }
 
-void activate_workspace (Display *display, const uint32_t which) {
+void activate_workspace (const uint32_t which) {
 	Window *windows = NULL;
 	unsigned int count;
 
@@ -86,13 +86,13 @@ void activate_workspace (Display *display, const uint32_t which) {
 
 	XFree(windows);
 
-	focus_active_window(display);
+	focus_active_window();
 }
 
-void set_workspace (Display *display, Window window, uint32_t workspace) {
+void set_workspace (Window window, uint32_t workspace) {
 	XChangeProperty(display, window, atom[_NET_WM_DESKTOP], atom[CARDINAL],
 		32, PropModeReplace, (void *)&workspace, 1);
-	activate_workspace(display, active_workspace(display));
+	activate_workspace(active_workspace());
 }
 
 unsigned long XDeleteAtomFromArray (
@@ -107,8 +107,7 @@ unsigned long XDeleteAtomFromArray (
 }
 
 void *XGetWindowPropertyArray (
-	Display *display, Window window, Atom property,
-	Atom type, unsigned long *count, int *bits
+	Window window, Atom property, Atom type, unsigned long *count, int *bits
 ) {
 	Atom _type;
 	void *data = NULL;
@@ -125,13 +124,12 @@ void *XGetWindowPropertyArray (
 	return data;
 }
 
-Bool XWindowPropertyArrayContains (
-	Display *display, Window window, Atom haystack, Atom needle
-) {
+Bool XWindowPropertyArrayContains (Window window, Atom haystack, Atom needle) {
 	unsigned long i;
 	int bits;
-	Atom *data = XGetWindowPropertyArray(display, window, haystack,
-		atom[ATOM], &i, &bits);
+	Atom *data = XGetWindowPropertyArray(
+		window, haystack, atom[ATOM], &i, &bits
+	);
 	while (i--)
 		if (needle == data[i]) {
 			XFree(data);
@@ -141,9 +139,9 @@ Bool XWindowPropertyArrayContains (
 	return False;
 }
 
-void close_window (Display *display, Window window) {
+void close_window (Window window) {
 	if (XWindowPropertyArrayContains(
-		display, window, atom[WM_PROTOCOLS], atom[WM_DELETE_WINDOW]
+		window, atom[WM_PROTOCOLS], atom[WM_DELETE_WINDOW]
 	)) XSendEvent(
 		display, window, False, NoEventMask, (XEvent *)&(XClientMessageEvent){
 			.type = ClientMessage, .display = display,
@@ -155,7 +153,7 @@ void close_window (Display *display, Window window) {
 	else XDestroyWindow(display, window);
 }
 
-void restore_window (Display *display, Window window) {
+void restore_window (Window window) {
 	XSizeHints sizehints;
 	XGetWMSizeHints(display, window, &sizehints, VOID, atom[WM_NORMAL_HINTS]);
 	if ((USPosition | USSize) & sizehints.flags)
@@ -163,16 +161,17 @@ void restore_window (Display *display, Window window) {
 			sizehints.width, sizehints.height);
 }
 
-void remove_state (Display *display, Window window, Atom state) {
+void remove_state (Window window, Atom state) {
 	if (state == atom[_NET_WM_STATE_FULLSCREEN])
-		restore_window(display, window);
+		restore_window(window);
 
 	int bits;
 	unsigned long count;
 
 	char *state_name = XGetAtomName(display, state);
-	Atom *states = XGetWindowPropertyArray(display, window,
-		atom[_NET_WM_STATE], atom[ATOM], &count, &bits);
+	Atom *states = XGetWindowPropertyArray(
+		window, atom[_NET_WM_STATE], atom[ATOM], &count, &bits
+	);
 	if (!count) {
 		printf("Can't remove %s from window 0x%08lx because it has no"
 			" _NET_WM_STATEs.\n", state_name, window);
@@ -197,7 +196,7 @@ void remove_state (Display *display, Window window, Atom state) {
 	XFree(states);
 }
 
-void maximize_window (Display *display, Window window) {
+void maximize_window (Window window) {
 	union {
 		struct { long flags; XWindowAttributes attributes; } hax;
 		XSizeHints sizehints;
@@ -207,15 +206,15 @@ void maximize_window (Display *display, Window window) {
 	XMoveResizeWindow(display, window, 0, 0, root.width, root.height);
 }
 
-void add_state (Display *display, Window window, Atom state) {
+void add_state (Window window, Atom state) {
 	if (state == atom[_NET_WM_STATE_FULLSCREEN])
-		maximize_window(display, window);
+		maximize_window(window);
 
 	printf("Add state %s to window 0x%08lx\n", XGetAtomName(display, state), window);
 
 	unsigned long count;
 	Atom *states = (Atom *)XGetWindowPropertyArray(
-		display, window, atom[_NET_WM_STATE], atom[ATOM], &count, VOID
+		window, atom[_NET_WM_STATE], atom[ATOM], &count, VOID
 	);
 
 	if (count) printf("Enumerating %d existing states:\n", count);
@@ -232,26 +231,26 @@ void add_state (Display *display, Window window, Atom state) {
 
 void alter_window_state (XClientMessageEvent event) {
 	switch (event.data.l[0]) {
-		case 0:
-			remove_state(event.display, event.window, event.data.l[1]);
+		case 0: // remove
+			remove_state(event.window, event.data.l[1]);
 			if (event.data.l[2])
-				remove_state(event.display, event.window, event.data.l[2]);
+				remove_state(event.window, event.data.l[2]);
 		break;
-		case 1:
-			add_state(event.display, event.window, event.data.l[1]);
+		case 1: // add
+			add_state(event.window, event.data.l[1]);
 			if (event.data.l[2])
-				add_state(event.display, event.window, event.data.l[2]);
+				add_state(event.window, event.data.l[2]);
 		break;
-		case 2:
-			if (XWindowPropertyArrayContains(event.display, event.window,
-				atom[_NET_WM_STATE], event.data.l[1]))
-				remove_state(event.display, event.window, event.data.l[1]);
-			else add_state(event.display, event.window, event.data.l[1]);
+		case 2: // toggle
+			if (XWindowPropertyArrayContains(
+				event.window, atom[_NET_WM_STATE], event.data.l[1])
+			) remove_state(event.window, event.data.l[1]);
+			else add_state(event.window, event.data.l[1]);
 			if (event.data.l[2]) {
-				if (XWindowPropertyArrayContains(event.display,
-					event.window, atom[_NET_WM_STATE], event.data.l[2]))
-					remove_state(event.display, event.window, event.data.l[2]);
-				else add_state(event.display, event.window, event.data.l[2]);
+				if (XWindowPropertyArrayContains(
+					event.window, atom[_NET_WM_STATE], event.data.l[2]
+				)) remove_state(event.window, event.data.l[2]);
+				else add_state(event.window, event.data.l[2]);
 			}
 		break;
 	}
@@ -285,7 +284,7 @@ void map_window (XMapRequestEvent *ev) {
 		printf("window 0x%08lx is apparently already on workspace %d\n", ev->window, *workspace);
 		return;
 	}
-	set_workspace(ev->display, ev->window, active_workspace(ev->display));
+	set_workspace(ev->window, active_workspace());
 
 	int x, y;
 	XGetGeometry(ev->display, ev->window, VOID,
@@ -303,7 +302,7 @@ void map_window (XMapRequestEvent *ev) {
 	XMapWindow(ev->display, ev->window);
 }
 
-void become_wm_unsafe (Display *display, Window WM) {
+void become_wm (Window WM) {
 	XSetSelectionOwner(display, atom[WM_Sn], WM, CurrentTime);
 	XSync(display, True);
 	if (pede != XGetSelectionOwner(display, atom[WM_Sn])) {
@@ -311,7 +310,7 @@ void become_wm_unsafe (Display *display, Window WM) {
 		exit(1);
 	}
 }
-void become_wm (Display *display, Window WM) {
+void make_wm (Window WM) {
 	Window old_wm = XGetSelectionOwner(display, atom[WM_Sn]);
 	if (old_wm) { // If there is a previous window manager
 		// Subscribe to window destruction notifications
@@ -329,7 +328,7 @@ void become_wm (Display *display, Window WM) {
 		*/
 		puts("Taking over window manager duties...");
 		fflush(stdout);
-		become_wm_unsafe(display, WM);
+		become_wm(WM);
 		puts("Waiting for old window manager to exit...");
 		fflush(stdout);
 		// Wait for old WM window to be destroyed
@@ -339,5 +338,5 @@ void become_wm (Display *display, Window WM) {
 			printf("event: 0x%08lx\n", event.type);
 		} while (event.type != DestroyNotify);
 		puts("Look at me. I'm the window manager now.");
-	} else become_wm_unsafe(display, WM);
+	} else become_wm(WM);
 }
