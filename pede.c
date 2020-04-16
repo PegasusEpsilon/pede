@@ -89,6 +89,33 @@ unsigned char active_workspace (Display *display) {
 	return ret_workspace ? *ret_workspace: 0;
 }
 
+Window active_window (Display *display) {
+	Window ret_root, ret_parent, *list;
+	unsigned count;
+	XWindowAttributes attrs;
+
+	XQueryTree(display, root.handle, &ret_root, &ret_parent, &list, &count);
+	for (int i = count; i && list[--i];) {
+		XGetWindowAttributes(display, list[i], &attrs);
+		// Setting focus on withdrawn/iconified windows is an error.
+		// Always consider them inactive.
+		if (IsViewable == attrs.map_state) return list[i];
+	}
+	return None;
+}
+
+void focus_window (Display *display, Window window) {
+	XSetInputFocus(display, window, RevertToParent, CurrentTime);
+	XChangeProperty(display, root.handle, atom[_NET_ACTIVE_WINDOW],
+		atom[WINDOW], 32, PropModeReplace, (void *)&window, 1);
+}
+
+void focus_active_window (Display *display) {
+	Window active = active_window(display);
+	printf("focusing window 0x%08lx\n", active);
+	focus_window(display, active);
+}
+
 void activate_workspace (Display *display, const uint32_t which) {
 	Window *windows = NULL;
 	unsigned int count;
@@ -117,40 +144,13 @@ void activate_workspace (Display *display, const uint32_t which) {
 
 	XFree(windows);
 
-	//focus_active_window(display);
+	focus_active_window(display);
 }
 
 void set_workspace (Display *display, Window window, uint32_t workspace) {
 	XChangeProperty(display, window, atom[_NET_WM_DESKTOP], atom[CARDINAL],
 		32, PropModeReplace, (void *)&workspace, 1);
 	activate_workspace(display, active_workspace(display));
-}
-
-Window active_window (Display *display) {
-	Window ret_root, ret_parent, *list;
-	unsigned count;
-	XWindowAttributes attrs;
-
-	XQueryTree(display, root.handle, &ret_root, &ret_parent, &list, &count);
-	for (int i = count; i && list[--i];) {
-		XGetWindowAttributes(display, list[i], &attrs);
-		// Setting focus on withdrawn/iconified windows is an error.
-		// Always consider them inactive.
-		if (IsViewable == attrs.map_state) return list[i];
-	}
-	return None;
-}
-
-void focus_window (Display *display, Window window) {
-	XSetInputFocus(display, window, RevertToParent, CurrentTime);
-	XChangeProperty(display, root.handle, atom[_NET_ACTIVE_WINDOW],
-		atom[WINDOW], 32, PropModeReplace, (void *)&window, 1);
-}
-
-void focus_active_window (Display *display) {
-	Window active = active_window(display);
-	printf("focusing window 0x%08lx\n", active);
-	focus_window(display, active);
 }
 
 unsigned long XDeleteAtomFromArray (
@@ -847,7 +847,9 @@ int main (int argc, char **argv, char **envp) {
 	activate_workspace(display, 0);
 	XMapWindow(display, pede);
 
+	// actually do the thing
 	event_loop(display, pede, gc, img);
+	// done doing the thing, shut it down, shut it down forever
 
 	// show all windows
 	activate_workspace(display, (uint32_t)-1);
