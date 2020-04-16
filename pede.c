@@ -146,7 +146,6 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 			}
 			break;
 		case ConfigureRequest:
-			//printf("ConfigureRequest window: 0x%08lx\n", event.xconfigurerequest.window);
 			XConfigureWindow(
 				event.xconfigurerequest.display,
 				event.xconfigurerequest.window,
@@ -465,7 +464,7 @@ int main (int argc, char **argv, char **envp) {
 	XGrabButton(display, 3, Mod4Mask, root.handle, True, ButtonPressMask,
 			GrabModeAsync, GrabModeAsync, None, None);
 
-	activate_workspace(display, 0);
+	activate_workspace(display, active_workspace(display));
 	XMapWindow(display, pede);
 
 	// actually do the thing
