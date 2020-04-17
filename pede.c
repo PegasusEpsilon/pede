@@ -266,11 +266,8 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 				target.w = attrStart.width;
 				target.h = attrStart.height;
 
-				unsigned i = drag_modifiers_length;
-				do {
-					drag_modifiers[--i](&target);
-					if (!i) break;
-				} while (i);
+				for (unsigned i = 0; i < drag_modifiers_length; i++)
+					drag_modifiers[i](&target);
 			} else {
 				// if center nonant clicked, always grow first
 				if (15 == moveSide) {
