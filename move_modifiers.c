@@ -5,6 +5,7 @@
 */
 
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "wm_core.h"
 #include "config.h"
@@ -15,6 +16,18 @@ static void keep_on_screen (BOX *t) {
 	// constrain windows to viewable area
 	t->x = MIN(MAX(t->x, 0), root.width - t->w);
 	t->y = MIN(MAX(t->y, 0), root.height - t->h);
+}
+static void snap_to_center (BOX *t) {
+	//POINT s_center = (POINT){ root.width / 2, root.height / 2 };
+	//POINT w_center = (POINT){ t->width / 2, t->h / 2 };
+	POINT center = (POINT){
+		.x = (root.width - t->w) / 2,
+		.y = (root.height - t->h) / 2
+	};
+	if (abs(center.x - t->x) < SNAP)
+		t->x = center.x;
+	if (abs(center.y - t->y) < SNAP)
+		t->y = center.y;
 }
 static void snap_to_edges (BOX *t) {
 	// snap while dragging (window size constant)
@@ -37,6 +50,7 @@ static void snap_to_edges (BOX *t) {
 }
 void (*move_modifiers[])(BOX *) = {
 	keep_on_screen,
-	snap_to_edges
+	snap_to_edges,
+	snap_to_center,
 };
 unsigned move_modifiers_length = sizeof(move_modifiers) / sizeof(void (*));
