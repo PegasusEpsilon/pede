@@ -22,6 +22,7 @@
 
 #include "wm_core.h"
 #include "drag_modifiers.h"
+#include "size_modifiers.h"
 #include "keys.h"
 #include "atoms.h"
 #include "events.h"
@@ -130,7 +131,6 @@ Bool XWaitEvent (Display *display) {
 }
 
 void event_loop (Display *display, Window pede, GC gc, XImage *img) {
-
 	XEvent event;
 	XWindowAttributes attrStart;
 	XButtonEvent dragStart = { 0 };
@@ -291,19 +291,8 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 					+ ((1 << 3) & moveSide ? ydiff : 0)
 					- ((1 << 1) & moveSide ? ydiff : 0), MINIMUM_SIZE);
 
-				// snap while resizing (window size varies)
-				if (abs(target.x) < SNAP) {
-					target.w = target.w + target.x;
-					target.x = 0;
-				}
-				if (abs(target.y) < SNAP) {
-					target.h = target.h + target.y;
-					target.y = 0;
-				}
-				if (abs(root.width - target.x - target.w) < SNAP)
-					target.w = root.width - target.x;
-				if (abs(root.height - target.y - target.h) < SNAP)
-					target.h = root.height - target.y;
+				for (unsigned i = 0; i < size_modifiers_length; i++)
+					size_modifiers[i](&target);
 			}
 
 			XMoveResizeWindow(display, event.xmotion.window,

@@ -6,11 +6,11 @@
 
 #include <stdlib.h>
 
-#include "config.h"
 #include "wm_core.h"
+#include "config.h"
 #include "util.h"
+#include "types.h"
 
-typedef struct { int x, y; unsigned w, h; } BOX;
 static void keep_on_screen (BOX *t) {
 	// constrain windows to viewable area
 	t->x = MIN(MAX(t->x, 0), root.width - t->w);
@@ -36,6 +36,7 @@ static void snap_to_edges (BOX *t) {
 		if (right_snap < SNAP) t->x = snap_x;
 }
 void (*drag_modifiers[])(BOX *) = {
-	keep_on_screen, snap_to_edges
+	keep_on_screen,
+	snap_to_edges
 };
 unsigned drag_modifiers_length = sizeof(drag_modifiers) / sizeof(void (*));

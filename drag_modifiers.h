@@ -7,7 +7,8 @@
 #ifndef DRAG_MODIFIERS_H
 #define DRAG_MODIFIERS_H
 
-typedef struct { int x, y; unsigned w, h; } BOX;
+#include "types.h"
+
 extern void (*drag_modifiers[])(BOX *);
 extern unsigned drag_modifiers_length;
 
