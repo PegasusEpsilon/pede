@@ -43,7 +43,9 @@ void handle_key_events (XEvent event) {
 			if (event.xkey.state & ShiftMask)
 				set_workspace(active_window(), workspace);
 			activate_workspace(workspace);
-		} else if (event.xkey.keycode == keycodes[KcTab]) {//do {
+		} else if (event.xkey.keycode == keycodes[KcTab]) {
+			XGrabKeyboard(display, root.handle, False,
+				GrabModeAsync, GrabModeAsync, event.xkey.time);
 			// TODO: change this to manually select and raise
 			// the bottom window or lower the top window
 			XCirculateSubwindows(event.xkey.display, event.xkey.root,
@@ -77,23 +79,23 @@ void handle_key_events (XEvent event) {
 		} else if (event.xkey.keycode == keycodes[KcXF86AudioMute]) {
 			if (!fork())
 				execlp(VOLUME_CONTROL, VOLUME_CONTROL, TOGGLE_MUTE, NULL);
-		} else if (event.xkey.keycode == keycodes[KcAlt_L]) {
-			// reserved for alt+tab
 		} else {
 			puts("caught unhandled keystroke, your KEY_EXPANDO list "
 				"is out of sync with keys.c");
 		}
 		break;
 	case KeyRelease:
-		if (keycodes[KcAlt_L] == event.xkey.keycode)
-			XLowerWindow(event.xkey.display, pede);
+		if (event.xkey.keycode == keycodes[KcAlt_L])
+			XUngrabKeyboard(display, event.xkey.time);
 		break;
 	}
 }
 
 static void numlock_ignoring_hook (int kc, unsigned mod) {
-	XGrabKey(display, kc, Mod2Mask | mod, root.handle, True, GrabModeAsync, GrabModeAsync);
-	XGrabKey(display, kc,            mod, root.handle, True, GrabModeAsync, GrabModeAsync);
+	XGrabKey(display, kc, Mod2Mask | mod, root.handle, True,
+		GrabModeAsync, GrabModeAsync);
+	XGrabKey(display, kc,            mod, root.handle, True,
+		GrabModeAsync, GrabModeAsync);
 }
 
 void unhook_keys(void) {
@@ -108,7 +110,6 @@ void hook_keys (void) {
 	numlock_ignoring_hook(keycodes[KcXF86AudioRaiseVolume], None);
 	numlock_ignoring_hook(keycodes[KcXF86AudioLowerVolume], None);
 	numlock_ignoring_hook(keycodes[KcXF86AudioMute], None);
-	numlock_ignoring_hook(keycodes[KcAlt_L], None);
 	numlock_ignoring_hook(keycodes[KcRight], Mod4Mask | ShiftMask);
 	numlock_ignoring_hook(keycodes[KcLeft], Mod4Mask | ShiftMask);
 	numlock_ignoring_hook(keycodes[KcRight], Mod4Mask);
