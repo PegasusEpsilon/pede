@@ -5,7 +5,6 @@
 */
 
 #include <X11/Xutil.h>
-#define Button9 9 // Not enough buttons defined for my mouse...
 
 #include <errno.h>  	// errno
 #include <unistd.h> 	// getpid()
@@ -20,15 +19,17 @@
 #include <sys/select.h>	// fd_set, pipe(), FD_SET(), FD_ZERO(), select()
 #include <time.h>   	// nanosleep()
 
-#include "wm_core.h"
-#include "drag_modifiers.h"
-#include "size_modifiers.h"
+#include "config.h"
+#include "defines.h"
+#include "types.h"
+#include "util.h"
 #include "keys.h"
 #include "atoms.h"
 #include "events.h"
 #include "signal_events.h"
-#include "config.h"
-#include "util.h"
+#include "wm_core.h"
+#include "move_modifiers.h"
+#include "size_modifiers.h"
 
 // TODO: break everything out into modules, then write:
 // inter-window snapping/gluing, generalized keyboard shortcuts
@@ -132,8 +133,8 @@ Bool XWaitEvent (Display *display) {
 
 void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 	XEvent event;
-	BOX start;
-	XButtonEvent dragStart = { 0 };
+	BOX windowStart;
+	CLICK mouseStart = (CLICK){ .btn = -1 };
 	char moveSide = 0;
 	while (!XWaitEvent(display)) {
 		if (!XPending(display)) return;
@@ -215,6 +216,7 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 			}
 			break;
 		case ButtonPress:
+			// always replay clicks to the root window
 			if (None == event.xbutton.subwindow) {
 				XAllowEvents(display, ReplayPointer, event.xbutton.time);
 				break;
@@ -223,99 +225,105 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 			XRaiseWindow(display, event.xbutton.subwindow);
 			XSetInputFocus(display, event.xbutton.subwindow,
 				RevertToParent, event.xbutton.time);
-			dragStart = event.xbutton;
-			if (!(dragStart.state & ~Mod2Mask)
-				&& Button9 != dragStart.button) {
+			if (!(event.xbutton.state & ~Mod2Mask)
+				&& Button9 != event.xbutton.button) {
 				XAllowEvents(display, ReplayPointer, event.xbutton.time);
 				break;
 			}
-			XGrabPointer(event.xbutton.display, event.xbutton.subwindow,
-					True, PointerMotionMask | ButtonReleaseMask,
-					GrabModeAsync, GrabModeAsync, None, None, event.xbutton.time);
-			XGetGeometry(display, event.xbutton.subwindow, VOID,
-				&start.x, &start.y, &start.w, &start.h, VOID, VOID);
-
-			if (Button1 == dragStart.button || Button9 == dragStart.button) break; // move
 
 			// event.xbutton.x and event.xbutton.y are not consistent
-			int relative_x = dragStart.x_root - start.x;
-			int relative_y = dragStart.y_root - start.y;
+			mouseStart = (CLICK){
+				.x = event.xbutton.x_root,
+				.y = event.xbutton.y_root,
+				.btn = event.xbutton.button
+			};
+			XGetGeometry(display, event.xbutton.subwindow, VOID,
+				&windowStart.x, &windowStart.y, &windowStart.w, &windowStart.h,
+				VOID, VOID);
+			XGrabPointer(event.xbutton.display, event.xbutton.subwindow,
+				True, PointerMotionMask | ButtonReleaseMask,
+				GrabModeAsync, GrabModeAsync, None, None, event.xbutton.time);
 
-// values for moveSide
-// I'll leave these here, for now...
-#define SIDE_BIT_TOP 0
-#define SIDE_BIT_RIGHT 1
-#define SIDE_BIT_BOTTOM 2
-#define SIDE_BIT_LEFT 3
-#define SIDE_RIGHT (1 << SIDE_BIT_RIGHT)
-#define SIDE_TOP (1 << SIDE_BIT_TOP)
-#define SIDE_LEFT (1 << SIDE_BIT_LEFT)
-#define SIDE_BOTTOM (1 << SIDE_BIT_BOTTOM)
+			if (Button1 == event.xbutton.button ||
+				Button9 == event.xbutton.button) break; // move
+
+			int relative_x = mouseStart.x - windowStart.x;
+			int relative_y = mouseStart.y - windowStart.y;
 
 			moveSide = // calculate which nonant the click occurred in
-				((relative_x < 2 * start.w / 3) << SIDE_BIT_LEFT) |
-				((relative_y < 2 * start.h / 3) << SIDE_BIT_TOP) |
-				((relative_x > start.w / 3) << SIDE_BIT_RIGHT) |
-				((relative_y > start.h / 3) << SIDE_BIT_BOTTOM);
+				((relative_y < 2 * windowStart.h / 3) << SIDE_TOP_BIT) |
+				((relative_x > windowStart.w / 3) << SIDE_RIGHT_BIT) |
+				((relative_y > windowStart.h / 3) << SIDE_BOTTOM_BIT) |
+				((relative_x < 2 * windowStart.w / 3) << SIDE_LEFT_BIT);
 
 			// if middle side nonant clicked, move only that side
+			// I feel like there's better code for this...
 			switch (moveSide) {
-			case SIDE_BOTTOM | SIDE_LEFT | SIDE_TOP:
-				moveSide = SIDE_LEFT;
+			case SIDE_LEFT_MASK | SIDE_TOP_MASK | SIDE_RIGHT_MASK:
+				moveSide = SIDE_TOP_MASK;
 				break;
-			case SIDE_LEFT | SIDE_TOP | SIDE_RIGHT:
-				moveSide = SIDE_TOP;
+			case SIDE_TOP_MASK | SIDE_RIGHT_MASK | SIDE_BOTTOM_MASK:
+				moveSide = SIDE_RIGHT_MASK;
 				break;
-			case SIDE_TOP | SIDE_RIGHT | SIDE_BOTTOM:
-				moveSide = SIDE_RIGHT;
+			case SIDE_RIGHT_MASK | SIDE_BOTTOM_MASK | SIDE_LEFT_MASK:
+				moveSide = SIDE_BOTTOM_MASK;
 				break;
-			case SIDE_RIGHT | SIDE_BOTTOM | SIDE_LEFT:
-				moveSide = SIDE_BOTTOM;
+			case SIDE_BOTTOM_MASK | SIDE_LEFT_MASK | SIDE_TOP_MASK:
+				moveSide = SIDE_LEFT_MASK;
 				break;
 			}
 			break;
 		case MotionNotify:
 			while (XCheckTypedEvent(display, MotionNotify, &event));
-			int xdiff = event.xbutton.x_root - dragStart.x_root;
-			int ydiff = event.xbutton.y_root - dragStart.y_root;
+			int xdiff = event.xbutton.x_root - mouseStart.x;
+			int ydiff = event.xbutton.y_root - mouseStart.y;
 			BOX target;
 
-			if (Button1 == dragStart.button || Button9 == dragStart.button) { // move
-				target.x = start.x + xdiff;
-				target.y = start.y + ydiff;
-				target.w = start.w;
-				target.h = start.h;
+			if (Button1 == mouseStart.btn || Button9 == mouseStart.btn) {
+				// move
+				target.x = windowStart.x + xdiff;
+				target.y = windowStart.y + ydiff;
+				target.w = windowStart.w;
+				target.h = windowStart.h;
 
-				for (unsigned i = 0; i < drag_modifiers_length; i++)
-					drag_modifiers[i](&target);
+				for (unsigned i = 0; i < move_modifiers_length; i++)
+					move_modifiers[i](&target);
 			} else {
 				// if center nonant clicked, always grow first
-				if (15 == moveSide) {
+				if (SIDE_CENTER(moveSide)) {
 					moveSide =
-						((xdiff < 0) << SIDE_BIT_LEFT) |
-						((ydiff < 0) << SIDE_BIT_TOP) |
-						((xdiff > 0) << SIDE_BIT_RIGHT) |
-						((ydiff > 0) << SIDE_BIT_BOTTOM);
+						((ydiff < 0) << SIDE_TOP_BIT) |
+						((xdiff > 0) << SIDE_RIGHT_BIT) |
+						((ydiff > 0) << SIDE_BOTTOM_BIT) |
+						((xdiff < 0) << SIDE_LEFT_BIT);
 					int xmag = abs(xdiff);
 					int ymag = abs(ydiff);
-					if (xmag / 2 > ymag) moveSide &= 5;
-					if (ymag / 2 > xmag) moveSide &= 10;
+					if (xmag / 2 > ymag)
+						moveSide &= SIDE_TOP_MASK | SIDE_BOTTOM_MASK;
+					if (ymag / 2 > xmag)
+						moveSide &= SIDE_LEFT_MASK | SIDE_RIGHT_MASK;
 				}
 
-				target.x = start.x + (SIDE_LEFT & moveSide ? xdiff : 0);
-				target.y = start.y + (SIDE_TOP & moveSide ? ydiff : 0);
-
-				target.w = MAX(start.w
-					+ (SIDE_RIGHT & moveSide ? xdiff : 0)
-					- (SIDE_LEFT & moveSide ? xdiff : 0), MINIMUM_SIZE);
-				target.h = MAX(start.h
-					+ (SIDE_BOTTOM & moveSide ? ydiff : 0)
-					- (SIDE_TOP & moveSide ? ydiff : 0), MINIMUM_SIZE);
+				xdiff = MIN((int)windowStart.w - 100, xdiff);
+				ydiff = MIN((int)windowStart.h - 100, ydiff);
+				target.y = windowStart.y + (SIDE_TOP(moveSide) ? ydiff : 0);
+				target.x = windowStart.x + (SIDE_LEFT(moveSide) ? xdiff : 0);
+				target.w = windowStart.w
+					+ (SIDE_RIGHT(moveSide) ? xdiff : 0)
+					- (SIDE_LEFT(moveSide) ? xdiff : 0);
+				target.h = windowStart.h
+					+ (SIDE_BOTTOM(moveSide) ? ydiff : 0)
+					- (SIDE_TOP(moveSide) ? ydiff : 0);
 
 				for (unsigned i = 0; i < size_modifiers_length; i++)
-					size_modifiers[i](&target);
+					size_modifiers[i](event.xmotion.window, moveSide, &target);
+
+				target.w = MAX(MINIMUM_SIZE, target.w);
+				target.h = MAX(MINIMUM_SIZE, target.h);
 			}
 
+			printf("target: %d,%d %dx%d\n",
+				target.x, target.y, target.w, target.h);
 			XMoveResizeWindow(display, event.xmotion.window,
 				target.x, target.y, target.w, target.h
 			);

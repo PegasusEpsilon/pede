@@ -9,7 +9,7 @@
 
 #include "types.h"
 
-extern void (*size_modifiers[])(BOX *);
+extern void (*size_modifiers[])(Window, char, BOX *);
 extern unsigned size_modifiers_length;
 
 #endif // SIZE_MODIFIERS_H

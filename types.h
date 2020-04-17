@@ -8,5 +8,7 @@
 #define TYPES_H
 
 typedef struct { int x, y; unsigned w, h; } BOX;
+typedef struct { unsigned x, y; } POINT;
+typedef struct { unsigned x, y, btn; } CLICK;
 
 #endif // TYPES_H
