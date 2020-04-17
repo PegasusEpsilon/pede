@@ -322,8 +322,6 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 				target.h = MAX(MINIMUM_SIZE, target.h);
 			}
 
-			printf("target: %d,%d %dx%d\n",
-				target.x, target.y, target.w, target.h);
 			XMoveResizeWindow(display, event.xmotion.window,
 				target.x, target.y, target.w, target.h
 			);
