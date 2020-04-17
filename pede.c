@@ -5,6 +5,7 @@
 */
 
 #include <X11/Xutil.h>
+#define Button9 9 // Not enough buttons defined for my mouse...
 
 #include <errno.h>  	// errno
 #include <unistd.h> 	// getpid()
@@ -20,34 +21,19 @@
 #include <time.h>   	// nanosleep()
 
 #include "wm_core.h"
+#include "drag_modifiers.h"
 #include "keys.h"
 #include "atoms.h"
 #include "events.h"
 #include "signal_events.h"
 #include "config.h"
+#include "util.h"
 
 // TODO: break everything out into modules, then write:
 // inter-window snapping/gluing, generalized keyboard shortcuts
 // better alt-tab, fullscreen support, window restoration after fullscreen,
 // vastly improve ICCCM and EWMH support...
 // tiling module? windows 10-style edge tiling?
-
-#define MAX(a, b) ((a) > (b) ? (a) : (b))
-
-#ifdef DEBUG
-static int (*saved_XChangeProperty)(Display *, Window, Atom, Atom, int, int,
-	const unsigned char *, int) = 0;
-void enable_debug (void) { saved_XChangeProperty = XChangeProperty; }
-int debug_XChangeProperty (Display *display, Window w, Atom property,
-	Atom type, int format, int mode, unsigned char *data, int nelements) {
-	printf("XChangeProperty request #%d: %s(%d)\n", XNextRequest(display), XGetAtomName(display, property), property);
-	fflush(stdout);
-	int ret = saved_XChangeProperty(display, w, property, type, format, mode,
-		data, nelements);
-	return ret;
-}
-#define XChangeProperty debug_XChangeProperty
-#endif
 
 int death_proof (Display *display, XErrorEvent *error) {
 	XGetErrorText(display, error->error_code, buffer, BUFFER_LENGTH-1);
@@ -68,12 +54,12 @@ void set_window_name (Display *display, Window w, char *name) {
 }
 
 typedef union {
-	uint32_t packed;
 	struct { uint8_t r, g, b, a; } c;
-} __attribute__((packed)) PIXEL;
+	uint32_t packed;
+} __attribute__((packed)) PIXEL32;
 
 XImage *load_image (Display *display, int screen, Visual *visual, char *filename) {
-	PIXEL *data = malloc(WIDTH * HEIGHT * sizeof(PIXEL));
+	PIXEL32 *data = malloc(WIDTH * HEIGHT * sizeof(PIXEL32));
 
 	FILE *file = fopen(filename, "r");
 	free(filename);
@@ -82,7 +68,7 @@ XImage *load_image (Display *display, int screen, Visual *visual, char *filename
 		fflush(stdout);
 		exit(1);
 	}
-	fread(data, sizeof(PIXEL), WIDTH * HEIGHT, file);
+	fread(data, sizeof(PIXEL32), WIDTH * HEIGHT, file);
 	fclose(file);
 
 	for (uint32_t i = 0; i < WIDTH * HEIGHT; i++) {
@@ -97,7 +83,7 @@ XImage *load_image (Display *display, int screen, Visual *visual, char *filename
 	}
 
 	return XCreateImage(display, visual, BPP, ZPixmap, 0,
-		(void *)data, WIDTH, HEIGHT, BPP, WIDTH * sizeof(PIXEL));
+		(void *)data, WIDTH, HEIGHT, BPP, WIDTH * sizeof(PIXEL32));
 }
 
 XImage *img;
@@ -144,6 +130,7 @@ Bool XWaitEvent (Display *display) {
 }
 
 void event_loop (Display *display, Window pede, GC gc, XImage *img) {
+
 	XEvent event;
 	XWindowAttributes attrStart;
 	XButtonEvent dragStart = { 0 };
@@ -237,8 +224,8 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 			XSetInputFocus(display, event.xbutton.subwindow,
 				RevertToParent, event.xbutton.time);
 			dragStart = event.xbutton;
-			if (!(dragStart.state & ~Mod2Mask)) {
-				// && 9 != dragStart.button
+			if (!(dragStart.state & ~Mod2Mask)
+				&& Button9 != dragStart.button) {
 				XAllowEvents(display, ReplayPointer, event.xbutton.time);
 				break;
 			}
@@ -247,7 +234,7 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 					GrabModeAsync, GrabModeAsync, None, None, event.xbutton.time);
 			XGetWindowAttributes(display, event.xbutton.subwindow, &attrStart);
 
-			if (1 == dragStart.button || 9 == dragStart.button) break; // move
+			if (Button1 == dragStart.button || Button9 == dragStart.button) break; // move
 
 			// event.xbutton.x and event.xbutton.y are not consistent
 			int relative_x = dragStart.x_root - attrStart.x;
@@ -261,40 +248,29 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 
 			// if side nonant clicked, move only that side
 			switch (moveSide) {
-				case  7: moveSide = 2; break;
-				case 11: moveSide = 1; break;
-				case 13: moveSide = 8; break;
-				case 14: moveSide = 4; break;
+				case  7: moveSide = 2; break; // top
+				case 11: moveSide = 1; break; // right
+				case 13: moveSide = 8; break; // bottom
+				case 14: moveSide = 4; break; // left
 			}
 			break;
 		case MotionNotify:
 			while (XCheckTypedEvent(display, MotionNotify, &event));
 			int xdiff = event.xbutton.x_root - dragStart.x_root;
 			int ydiff = event.xbutton.y_root - dragStart.y_root;
-			struct { int x, y, w, h; } target;
+			BOX target;
 
-			if (1 == dragStart.button || 9 == dragStart.button) { // move
+			if (Button1 == dragStart.button || Button9 == dragStart.button) { // move
 				target.x = attrStart.x + xdiff;
 				target.y = attrStart.y + ydiff;
 				target.w = attrStart.width;
 				target.h = attrStart.height;
 
-				// snap while dragging (window size constant)
-				int top_snap = abs(target.y);
-				int right_snap = abs(root.width - target.x - target.w);
-				int bottom_snap = abs(root.height - target.y - target.h);
-				int left_snap = abs(target.x);
-
-				if (top_snap <= bottom_snap) {
-					if (top_snap < SNAP) target.y = 0;
-				} else if (bottom_snap < SNAP)
-					target.y = root.height - target.h;
-
-				if (left_snap <= right_snap) {
-					if (left_snap < SNAP) target.x = 0;
-				} else if (right_snap < SNAP)
-						target.x = root.width - target.w;
-
+				unsigned i = sizeof(drag_modifiers) / sizeof(void (*));
+				do {
+					drag_modifiers[--i](&target);
+					if (!i) break;
+				} while (i);
 			} else {
 				// if center nonant clicked, always grow first
 				if (15 == moveSide) {
@@ -467,8 +443,8 @@ int main (int argc, char **argv, char **envp) {
 
 	hook_keys();
 
-	// button9 is my thumb button - just in case
-	//numlock_doesnt_matter(9, None);
+	// Button9 (my thumb button) = move window
+	numlock_doesnt_matter(Button9, None);
 	// left click = raise window
 	numlock_doesnt_matter(Button1, None);
 	// super+left = move window
