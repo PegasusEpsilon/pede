@@ -17,7 +17,7 @@ long long nul;
 #define BUFFER_LENGTH 512
 char buffer[BUFFER_LENGTH];
 Display *display;
-struct { Window handle; unsigned int width, height; } root;
+struct { Window handle; unsigned width, height; } root;
 Window pede;
 
 unsigned char active_workspace (void) {
@@ -62,7 +62,7 @@ void focus_active_window (void) {
 
 void activate_workspace (const uint32_t which) {
 	Window *windows = NULL;
-	unsigned int count;
+	unsigned count;
 
 	if ((uint32_t)-1 != which)
 		XChangeProperty(display, root.handle, atom[_NET_CURRENT_DESKTOP],
