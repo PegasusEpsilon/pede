@@ -36,6 +36,27 @@ void snap_to_edges (Window sizing, char side, BOX *t) {
 	else if (SIDE_RIGHT(side) && abs(snap_w - t->w) < SNAP) t->w = snap_w;
 }
 
+void snap_to_center (Window sizing, char side, BOX *t) {
+	POINT center = (POINT){ .x = root.width / 2, .y = root.height / 2 };;
+	POINT target = (POINT){ .x = t->x + t->w, .y = t->y + t->h };
+
+	if (SIDE_TOP(side)) {
+		if (abs(center.y - t->y) < SNAP) {
+			t->h += t->y - center.y;
+			t->y = center.y;
+		}
+	} else if (SIDE_BOTTOM(side))
+		if (abs(center.y - target.y) < SNAP)
+			t->h = center.y - t->y;
+	if (SIDE_LEFT(side)) {
+		if (abs(center.x - t->x) < SNAP) {
+			t->w += t->x - center.x;
+			t->x = center.x;
+		}
+	} else if (SIDE_RIGHT(side))
+		if (abs(center.x - target.x) < SNAP)
+			t->w = center.x - t->x;
+}
 void snap_to_siblings (Window sizing, char side, BOX *t) {
 	Window *windows = NULL;
 	unsigned count;
@@ -144,6 +165,7 @@ void (*size_modifiers[])(Window sizing, char side, BOX *) = {
 	//do_nothing,
 	keep_on_screen,
 	snap_to_edges,
-	snap_to_siblings
+	snap_to_siblings,
+	snap_to_center
 };
 unsigned size_modifiers_length = sizeof(size_modifiers) / sizeof(void (*));
