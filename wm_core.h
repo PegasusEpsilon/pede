@@ -1,4 +1,4 @@
-/* wm.h - Pegasus Epsilon's Desktop Environment
+/* wm_core.h - Pegasus Epsilon's Desktop Environment
 ** Goal: Less than a megabyte resident
 ** (C)opyright 2019-2020 "Pegasus Epsilon" <pegasus@pimpninjas.org>
 ** Distribute Unmodified - https://pegasus.pimpninjas.org/license
@@ -6,6 +6,9 @@
 
 #ifndef WM_H
 #define WM_H
+
+#include <X11/Xlib.h>
+#include <stdint.h>
 
 extern long long nul;
 #define VOID ((void *)&nul)

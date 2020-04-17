@@ -1,4 +1,4 @@
-/* wm.c - Pegasus Epsilon's Desktop Environment
+/* wm_core.c - Pegasus Epsilon's Desktop Environment
 ** Goal: Less than a megabyte resident
 ** (C)opyright 2019-2020 "Pegasus Epsilon" <pegasus@pimpninjas.org>
 ** Distribute Unmodified - https://pegasus.pimpninjas.org/license
