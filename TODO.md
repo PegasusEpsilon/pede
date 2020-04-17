@@ -1,0 +1,4 @@
+- move snapping to siblings
+- refine snapping algorithm
+- shared edge ("seam") resizing
+- better alt+tab
