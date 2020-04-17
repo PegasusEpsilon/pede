@@ -4,15 +4,19 @@
 ** Distribute Unmodified - https://pegasus.pimpninjas.org/license
 */
 
+#include <stdlib.h>
+
+#include "config.h"
 #include "wm_core.h"
+#include "util.h"
 
 typedef struct { int x, y; unsigned w, h; } BOX;
-void keep_on_screen (BOX *t) {
+static void keep_on_screen (BOX *t) {
 	// constrain windows to viewable area
 	t->x = MIN(MAX(t->x, 0), root.width - t->w);
 	t->y = MIN(MAX(t->y, 0), root.height - t->h);
 }
-void snap_to_edges (BOX *t) {
+static void snap_to_edges (BOX *t) {
 	// snap while dragging (window size constant)
 	int snap_x = root.width - t->w;
 	int snap_y = root.height - t->h;
@@ -34,3 +38,4 @@ void snap_to_edges (BOX *t) {
 void (*drag_modifiers[])(BOX *) = {
 	keep_on_screen, snap_to_edges
 };
+unsigned drag_modifiers_length = sizeof(drag_modifiers) / sizeof(void (*));

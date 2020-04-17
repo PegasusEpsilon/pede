@@ -8,7 +8,7 @@
 #define DRAG_MODIFIERS_H
 
 typedef struct { int x, y; unsigned w, h; } BOX;
-
-void (*drag_modifiers[])(BOX *);
+extern void (*drag_modifiers[])(BOX *);
+extern unsigned drag_modifiers_length;
 
 #endif // DRAG_MODIFIERS_H

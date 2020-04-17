@@ -266,7 +266,7 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 				target.w = attrStart.width;
 				target.h = attrStart.height;
 
-				unsigned i = sizeof(drag_modifiers) / sizeof(void (*));
+				unsigned i = drag_modifiers_length;
 				do {
 					drag_modifiers[--i](&target);
 					if (!i) break;
