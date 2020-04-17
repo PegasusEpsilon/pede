@@ -6,6 +6,9 @@
 
 #ifndef ATOMS_H
 #define ATOMS_H
+
+#include <X11/Xlib.h>
+
 enum Atoms {
 	WM_Sn,
 #define ATOM_EXPANDO(x) x,
