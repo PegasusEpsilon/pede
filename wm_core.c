@@ -71,8 +71,8 @@ void activate_workspace (const uint32_t which) {
 	if (!XQueryTree(display, root.handle, VOID, VOID, &windows,
 		&count)) return;
 
-	uint32_t *workspace = NULL;
 	for (int i = 0; i < count; i++) {
+		uint32_t *workspace = NULL;
 		XGetWindowProperty(display, windows[i], atom[_NET_WM_DESKTOP], 0, 1,
 			False, atom[CARDINAL], VOID, VOID, VOID, VOID, (void *)&workspace);
 		if (!workspace) continue;
