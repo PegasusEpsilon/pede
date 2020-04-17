@@ -1,4 +1,5 @@
 - move snapping to siblings
 - refine snapping algorithm
+- snap on map
 - shared edge ("seam") resizing
 - better alt+tab
