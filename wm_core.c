@@ -50,6 +50,7 @@ Window active_window (void) {
 }
 
 void focus_window (Window window) {
+	if (window == pede) return;
 	XSetInputFocus(display, window, RevertToParent, CurrentTime);
 	XChangeProperty(display, root.handle, atom[_NET_ACTIVE_WINDOW],
 		atom[WINDOW], 32, PropModeReplace, (void *)&window, 1);
@@ -93,6 +94,7 @@ void activate_workspace (const uint32_t which) {
 }
 
 void set_workspace (Window window, uint32_t workspace) {
+	if (window == pede) return;
 	XChangeProperty(display, window, atom[_NET_WM_DESKTOP], atom[CARDINAL],
 		32, PropModeReplace, (void *)&workspace, 1);
 	activate_workspace(active_workspace());
