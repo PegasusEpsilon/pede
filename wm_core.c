@@ -21,10 +21,12 @@ struct { Window handle; unsigned width, height; } root;
 Window pede;
 
 unsigned char active_workspace (void) {
-	uint32_t *workspace = NULL;
+	uint32_t ret, *workspace = NULL;
 	XGetWindowProperty(display, root.handle, atom[_NET_CURRENT_DESKTOP], 0,
 		1, False, atom[CARDINAL], VOID, VOID, VOID, VOID, (void *)&workspace);
-	return workspace ? *workspace: 0;
+	ret = workspace ? *workspace : 0;
+	XFree(workspace);
+	return ret;
 }
 
 Window active_window (void) {
