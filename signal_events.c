@@ -1,3 +1,9 @@
+/* signal_events.c - Pegasus Epsilon's Desktop Environment
+** Goal: Less than a megabyte resident
+** (C)opyright 2019-2020 "Pegasus Epsilon" <pegasus@pimpninjas.org>
+** Distribute Unmodified - https://pegasus.pimpninjas.org/license
+*/
+
 #define _POSIX_C_SOURCE 200112L	// struct sigaction
 
 #include <signal.h>	// struct sigaction, sigemptyset(), sigaction(), SIG(USR1, USR2, INT)

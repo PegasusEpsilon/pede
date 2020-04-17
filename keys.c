@@ -1,3 +1,9 @@
+/* pede.c - Pegasus Epsilon's Desktop Environment
+** Goal: Less than a megabyte resident
+** (C)opyright 2019-2020 "Pegasus Epsilon" <pegasus@pimpninjas.org>
+** Distribute Unmodified - https://pegasus.pimpninjas.org/license
+*/
+
 #include <X11/Xlib.h>
 #include <unistd.h>
 #include <stdint.h>
@@ -21,12 +27,18 @@ void handle_key_events (XEvent event) {
 	switch(event.type) {
 	case KeyPress:
 		// stupid C rules about switch blocks requiring integer constants...
-		if (event.xkey.keycode == keycodes[KcRight]) {
+		if (
+			event.xkey.keycode == keycodes[KcRight] &&
+			event.xkey.state & Mod4Mask
+		) {
 			int workspace = (1 + active_workspace()) % 4;
 			if (event.xkey.state & ShiftMask)
 				set_workspace(active_window(), workspace);
 			activate_workspace(workspace);
-		} else if (event.xkey.keycode == keycodes[KcLeft]) {
+		} else if (
+			event.xkey.keycode == keycodes[KcLeft] &&
+			event.xkey.state & Mod4Mask
+		) {
 			int workspace = (3 + active_workspace()) % 4;
 			if (event.xkey.state & ShiftMask)
 				set_workspace(active_window(), workspace);
