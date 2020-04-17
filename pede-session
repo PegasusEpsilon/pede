@@ -4,6 +4,7 @@
 PEDE_DIRECTORY=$HOME/code/pede # pede and power.icon should both live here.
 WALLPAPER=$HOME/Pictures/wallpaper.png
 export GTK_THEME=Cloak-3.22
+export GTK_MODULES=canberra-gtk-module
 
 # not config
 export GTK2_RC_FILES=/usr/share/themes/$GTK_THEME/gtk-2.0/gtkrc
