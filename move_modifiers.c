@@ -1,4 +1,4 @@
-/* drag_modifiers.c - Pegasus Epsilon's Desktop Environment
+/* move_modifiers.c - Pegasus Epsilon's Desktop Environment
 ** Goal: Less than a megabyte resident
 ** (C)opyright 2019-2020 "Pegasus Epsilon" <pegasus@pimpninjas.org>
 ** Distribute Unmodified - https://pegasus.pimpninjas.org/license
@@ -35,8 +35,8 @@ static void snap_to_edges (BOX *t) {
 	} else
 		if (right_snap < SNAP) t->x = snap_x;
 }
-void (*drag_modifiers[])(BOX *) = {
+void (*move_modifiers[])(BOX *) = {
 	keep_on_screen,
 	snap_to_edges
 };
-unsigned drag_modifiers_length = sizeof(drag_modifiers) / sizeof(void (*));
+unsigned move_modifiers_length = sizeof(move_modifiers) / sizeof(void (*));
