@@ -30,7 +30,7 @@ This DE is not for the faint of heart. It is for the extreme minimalist.
   - Super+right-click = resize
 - It lets you alt+tab (barely, I know, it's on my TODO)
 - It snaps windows to the edge of the screen
-- It snaps windows to each other (only when resizing, currently)
+- It snaps windows to each other (kind of, and only when resizing, currently)
 - It draws a compositor-friendly power button in a configurable location
 - It compiles quickly, which is good, because...
 - It is reconfigured by editing the source and recompiling
