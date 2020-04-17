@@ -73,9 +73,8 @@ void activate_workspace (const uint32_t which) {
 
 	uint32_t *workspace = NULL;
 	for (int i = 0; i < count; i++) {
-		XGetWindowProperty(display, windows[i], atom[_NET_WM_DESKTOP], 0,
-			BUFFER_LENGTH, False, atom[CARDINAL], VOID, VOID, VOID, VOID,
-			(void *)&workspace);
+		XGetWindowProperty(display, windows[i], atom[_NET_WM_DESKTOP], 0, 1,
+			False, atom[CARDINAL], VOID, VOID, VOID, VOID, (void *)&workspace);
 		if (!workspace) continue;
 		if (which == *workspace
 			|| (uint32_t)-1 == *workspace
