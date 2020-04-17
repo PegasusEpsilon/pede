@@ -132,7 +132,7 @@ Bool XWaitEvent (Display *display) {
 
 void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 	XEvent event;
-	XWindowAttributes attrStart;
+	BOX start;
 	XButtonEvent dragStart = { 0 };
 	char moveSide = 0;
 	while (!XWaitEvent(display)) {
@@ -232,26 +232,46 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 			XGrabPointer(event.xbutton.display, event.xbutton.subwindow,
 					True, PointerMotionMask | ButtonReleaseMask,
 					GrabModeAsync, GrabModeAsync, None, None, event.xbutton.time);
-			XGetWindowAttributes(display, event.xbutton.subwindow, &attrStart);
+			XGetGeometry(display, event.xbutton.subwindow, VOID,
+				&start.x, &start.y, &start.w, &start.h, VOID, VOID);
 
 			if (Button1 == dragStart.button || Button9 == dragStart.button) break; // move
 
 			// event.xbutton.x and event.xbutton.y are not consistent
-			int relative_x = dragStart.x_root - attrStart.x;
-			int relative_y = dragStart.y_root - attrStart.y;
+			int relative_x = dragStart.x_root - start.x;
+			int relative_y = dragStart.y_root - start.y;
+
+// values for moveSide
+// I'll leave these here, for now...
+#define SIDE_BIT_TOP 0
+#define SIDE_BIT_RIGHT 1
+#define SIDE_BIT_BOTTOM 2
+#define SIDE_BIT_LEFT 3
+#define SIDE_RIGHT (1 << SIDE_BIT_RIGHT)
+#define SIDE_TOP (1 << SIDE_BIT_TOP)
+#define SIDE_LEFT (1 << SIDE_BIT_LEFT)
+#define SIDE_BOTTOM (1 << SIDE_BIT_BOTTOM)
 
 			moveSide = // calculate which nonant the click occurred in
-				((relative_x > attrStart.width / 3) << 0) | // right
-				((relative_y < 2 * attrStart.height / 3) << 1) | // top
-				((relative_x < 2 * attrStart.width / 3) << 2) | // left
-				((relative_y > attrStart.height / 3) << 3); // bottom
+				((relative_x < 2 * start.w / 3) << SIDE_BIT_LEFT) |
+				((relative_y < 2 * start.h / 3) << SIDE_BIT_TOP) |
+				((relative_x > start.w / 3) << SIDE_BIT_RIGHT) |
+				((relative_y > start.h / 3) << SIDE_BIT_BOTTOM);
 
-			// if side nonant clicked, move only that side
+			// if middle side nonant clicked, move only that side
 			switch (moveSide) {
-				case  7: moveSide = 2; break; // top
-				case 11: moveSide = 1; break; // right
-				case 13: moveSide = 8; break; // bottom
-				case 14: moveSide = 4; break; // left
+			case SIDE_BOTTOM | SIDE_LEFT | SIDE_TOP:
+				moveSide = SIDE_LEFT;
+				break;
+			case SIDE_LEFT | SIDE_TOP | SIDE_RIGHT:
+				moveSide = SIDE_TOP;
+				break;
+			case SIDE_TOP | SIDE_RIGHT | SIDE_BOTTOM:
+				moveSide = SIDE_RIGHT;
+				break;
+			case SIDE_RIGHT | SIDE_BOTTOM | SIDE_LEFT:
+				moveSide = SIDE_BOTTOM;
+				break;
 			}
 			break;
 		case MotionNotify:
@@ -261,10 +281,10 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 			BOX target;
 
 			if (Button1 == dragStart.button || Button9 == dragStart.button) { // move
-				target.x = attrStart.x + xdiff;
-				target.y = attrStart.y + ydiff;
-				target.w = attrStart.width;
-				target.h = attrStart.height;
+				target.x = start.x + xdiff;
+				target.y = start.y + ydiff;
+				target.w = start.w;
+				target.h = start.h;
 
 				for (unsigned i = 0; i < drag_modifiers_length; i++)
 					drag_modifiers[i](&target);
@@ -272,24 +292,25 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 				// if center nonant clicked, always grow first
 				if (15 == moveSide) {
 					moveSide =
-						((xdiff > 0) << 0) |
-						((ydiff < 0) << 1) |
-						((xdiff < 0) << 2) |
-						((ydiff > 0) << 3);
+						((xdiff < 0) << SIDE_BIT_LEFT) |
+						((ydiff < 0) << SIDE_BIT_TOP) |
+						((xdiff > 0) << SIDE_BIT_RIGHT) |
+						((ydiff > 0) << SIDE_BIT_BOTTOM);
 					int xmag = abs(xdiff);
 					int ymag = abs(ydiff);
 					if (xmag / 2 > ymag) moveSide &= 5;
 					if (ymag / 2 > xmag) moveSide &= 10;
 				}
 
-				target.x = attrStart.x + ((1 << 2) & moveSide ? xdiff : 0);
-				target.y = attrStart.y + ((1 << 1) & moveSide ? ydiff : 0);
-				target.w = MAX(attrStart.width
-					+ ((1 << 0) & moveSide ? xdiff : 0)
-					- ((1 << 2) & moveSide ? xdiff : 0), MINIMUM_SIZE);
-				target.h = MAX(attrStart.height
-					+ ((1 << 3) & moveSide ? ydiff : 0)
-					- ((1 << 1) & moveSide ? ydiff : 0), MINIMUM_SIZE);
+				target.x = start.x + (SIDE_LEFT & moveSide ? xdiff : 0);
+				target.y = start.y + (SIDE_TOP & moveSide ? ydiff : 0);
+
+				target.w = MAX(start.w
+					+ (SIDE_RIGHT & moveSide ? xdiff : 0)
+					- (SIDE_LEFT & moveSide ? xdiff : 0), MINIMUM_SIZE);
+				target.h = MAX(start.h
+					+ (SIDE_BOTTOM & moveSide ? ydiff : 0)
+					- (SIDE_TOP & moveSide ? ydiff : 0), MINIMUM_SIZE);
 
 				for (unsigned i = 0; i < size_modifiers_length; i++)
 					size_modifiers[i](&target);
