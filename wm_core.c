@@ -106,7 +106,8 @@ unsigned long XDeleteAtomFromArray (
 	unsigned long src = 0, dst = 0;
 	while (length && src < length) {
 		while (src < length && array[src] == element) src++;
-		if (src < length && src != dst) array[dst++] = array[src++];
+		if (src < length && src != dst) array[dst] = array[src];
+		src++; dst++;
 	}
 	return dst;
 }
