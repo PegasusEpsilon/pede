@@ -6,6 +6,7 @@
 
 #include <X11/Xlib.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
 
@@ -51,7 +52,11 @@ void handle_key_events (XEvent event) {
 			XCirculateSubwindows(event.xkey.display, event.xkey.root,
 				event.xkey.state & Mod1Mask ? LowerHighest : RaiseLowest);
 		} else if (event.xkey.keycode == keycodes[KcR]) {
-			if (!fork()) execlp(RUNNER, RUNNER, RUNNERARGS, NULL);
+			if (!fork()) {
+				if (!fork())
+					execlp(RUNNER, RUNNER, RUNNERARGS, NULL);
+				else exit(0);
+			}
 		} else if (event.xkey.keycode == keycodes[KcF4]) {
 			close_window(active_window());
 		} else if (event.xkey.keycode == keycodes[Kc1]) {
@@ -71,14 +76,23 @@ void handle_key_events (XEvent event) {
 				set_workspace(active_window(), 3);
 			else activate_workspace(3);
 		} else if (event.xkey.keycode == keycodes[KcXF86AudioRaiseVolume]) {
-			if (!fork())
-				execlp(VOLUME_CONTROL, VOLUME_CONTROL, RAISE_VOLUME, NULL);
+			if (!fork()) {
+				if (!fork())
+					execlp(VOLUME_CONTROL, VOLUME_CONTROL, RAISE_VOLUME, NULL);
+				else exit(0);
+			}
 		} else if (event.xkey.keycode == keycodes[KcXF86AudioLowerVolume]) {
-			if (!fork())
-				execlp(VOLUME_CONTROL, VOLUME_CONTROL, LOWER_VOLUME, NULL);
+			if (!fork()) {
+				if (!fork())
+					execlp(VOLUME_CONTROL, VOLUME_CONTROL, LOWER_VOLUME, NULL);
+				else exit(0);
+			}
 		} else if (event.xkey.keycode == keycodes[KcXF86AudioMute]) {
-			if (!fork())
-				execlp(VOLUME_CONTROL, VOLUME_CONTROL, TOGGLE_MUTE, NULL);
+			if (!fork()) {
+				if (!fork())
+					execlp(VOLUME_CONTROL, VOLUME_CONTROL, TOGGLE_MUTE, NULL);
+				else exit(0);
+			}
 		} else {
 			puts("caught unhandled keystroke, your KEY_EXPANDO list "
 				"is out of sync with keys.c");
