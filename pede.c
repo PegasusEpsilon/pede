@@ -15,6 +15,7 @@
 
 #include <libgen.h> 	// dirname()
 #include <string.h> 	// strlen()
+#include <signal.h> 	// SIGINT, SIGCHLD, SIGTERM, SIGUSR1
 #include <sys/select.h>	// fd_set, pipe(), FD_SET(), FD_ZERO(), select()
 #include <sys/wait.h>	// wait()
 #include <time.h>   	// nanosleep()
@@ -283,14 +284,12 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 			while (XCheckTypedEvent(display, MotionNotify, &event));
 			int xdiff = event.xbutton.x_root - mouseStart.x;
 			int ydiff = event.xbutton.y_root - mouseStart.y;
-			BOX target;
+			BOX target = windowStart;
 
 			if (Button1 == mouseStart.btn || Button9 == mouseStart.btn) {
 				// move
 				target.x = windowStart.x + xdiff;
 				target.y = windowStart.y + ydiff;
-				target.w = windowStart.w;
-				target.h = windowStart.h;
 
 				for (unsigned i = 0; i < move_modifiers_length; i++)
 					move_modifiers[i](&target);
@@ -310,22 +309,20 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 						moveSide &= SIDE_LEFT_MASK | SIDE_RIGHT_MASK;
 				}
 
-				xdiff = MIN((int)windowStart.w - 100, xdiff);
-				ydiff = MIN((int)windowStart.h - 100, ydiff);
-				target.y = windowStart.y + (SIDE_TOP(moveSide) ? ydiff : 0);
-				target.x = windowStart.x + (SIDE_LEFT(moveSide) ? xdiff : 0);
-				target.w = windowStart.w
-					+ (SIDE_RIGHT(moveSide) ? xdiff : 0)
-					- (SIDE_LEFT(moveSide) ? xdiff : 0);
-				target.h = windowStart.h
-					+ (SIDE_BOTTOM(moveSide) ? ydiff : 0)
-					- (SIDE_TOP(moveSide) ? ydiff : 0);
+				if (SIDE_TOP(moveSide)) {
+					target.h = MAX(MINIMUM_SIZE, (int)windowStart.h - ydiff);
+					target.y -= target.h - windowStart.h;
+				} else if (SIDE_BOTTOM(moveSide))
+					target.h = MAX(MINIMUM_SIZE, (int)windowStart.h + ydiff);
+
+				if (SIDE_LEFT(moveSide)) {
+					target.w = MAX(MINIMUM_SIZE, (int)windowStart.w - xdiff);
+					target.x -= target.w - windowStart.w;
+				} else if (SIDE_RIGHT(moveSide))
+					target.w = MAX(MINIMUM_SIZE, (int)windowStart.w + xdiff);
 
 				for (unsigned i = 0; i < size_modifiers_length; i++)
 					size_modifiers[i](event.xmotion.window, moveSide, &target);
-
-				target.w = MAX(MINIMUM_SIZE, target.w);
-				target.h = MAX(MINIMUM_SIZE, target.h);
 			}
 
 			XMoveResizeWindow(display, event.xmotion.window,
