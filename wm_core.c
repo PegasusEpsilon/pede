@@ -109,7 +109,7 @@ unsigned long XDeleteAtomFromArray (
 		if (src < length && src != dst) array[dst] = array[src];
 		src++; dst++;
 	}
-	return dst;
+	return --dst;
 }
 
 void *XGetWindowPropertyArray (
@@ -118,7 +118,7 @@ void *XGetWindowPropertyArray (
 	Atom _type;
 	void *data = NULL;
 
-	XGetWindowProperty(display, window, property, 0, 0, False, type, &_type,
+	XGetWindowProperty(display, window, property, 0, 0, False, None, &_type,
 		bits, VOID, count, (void *)&data);
 	XFree(data);
 
@@ -194,9 +194,10 @@ void remove_state (Window window, Atom state) {
 	unsigned long new_count = XDeleteAtomFromArray(states, count, state);
 	if (new_count != count) {
 		if (new_count) XChangeProperty(display, window, atom[_NET_WM_STATE],
-			atom[ATOM], 8 * sizeof(state), PropModeReplace, (void *)&states, new_count);
+			atom[ATOM], bits, PropModeReplace, (void *)&states, new_count);
 		else XDeleteProperty(display, window, atom[_NET_WM_STATE]);
-	} else printf("Window 0x%08lx's _NET_WM_STATE contains no %s\n", window, state_name);
+	} else printf("Window 0x%08lx's _NET_WM_STATE contains no %s\n",
+		window, state_name);
 
 	XFree(state_name);
 	XFree(states);
