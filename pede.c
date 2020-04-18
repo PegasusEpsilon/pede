@@ -11,12 +11,12 @@
 
 #include <stdio.h>  	// puts(), printf(), fflush(), stdout
 #include <stdlib.h> 	// exit()
-#include <stdbool.h>
 #include <stdint.h> 	// uint32_t
 
 #include <libgen.h> 	// dirname()
 #include <string.h> 	// strlen()
 #include <sys/select.h>	// fd_set, pipe(), FD_SET(), FD_ZERO(), select()
+#include <sys/wait.h>	// wait()
 #include <time.h>   	// nanosleep()
 
 #include "config.h"
@@ -100,22 +100,28 @@ void cleanup (void) {
 }
 
 char *argv0 = NULL;
-bool signal_handler (void) {
-	printf("received signal %d\n", which_signal);
+Bool signal_handler (void) {
+	printf("event SIG%s\n", signame(which_signal));
 	fflush(stdout);
 	switch (which_signal) {
 	case SIGINT:
-		puts("\nInterrupted.");
+		puts("Interrupted.");
 		return True;
 	case SIGTERM:
-		puts("\nTerminated.");
+		puts("Terminated.");
 		return True;
+	case SIGCHLD: {
+			int status;
+			while (0 < waitpid(-1, &status, WNOHANG))
+				printf("Child process returned %d.\n", status);
+		};
+		break;
 	case SIGUSR1:
 		cleanup();
 		execlp(argv0, argv0);
 		// we never get here anyway
 	}
-	return false;
+	return False;
 }
 
 Bool XWaitEvent (Display *display) {
