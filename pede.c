@@ -110,9 +110,15 @@ Bool signal_handler (void) {
 	printf("event SIG%s\n", signame(which_signal));
 	fflush(stdout);
 	switch (which_signal) {
+	case SIGHUP:
+		return True;
 	case SIGINT:
 		puts("Interrupted.");
 		return True;
+	case SIGUSR1:
+		cleanup();
+		execlp(argv0, argv0, NULL);
+		// we never get here anyway
 	case SIGTERM:
 		puts("Terminated.");
 		return True;
@@ -122,10 +128,6 @@ Bool signal_handler (void) {
 				printf("Child process returned %d.\n", status);
 		};
 		break;
-	case SIGUSR1:
-		cleanup();
-		execlp(argv0, argv0, NULL);
-		// we never get here anyway
 	}
 	return False;
 }
