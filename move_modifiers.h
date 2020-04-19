@@ -9,7 +9,7 @@
 
 #include "types.h"
 
-extern void (*move_modifiers[])(BOX *);
+extern void (*move_modifiers[])(Window w, BOX *);
 extern unsigned move_modifiers_length;
 
 #endif // MOVE_MODIFIERS_H

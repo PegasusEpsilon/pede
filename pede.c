@@ -124,7 +124,7 @@ Bool signal_handler (void) {
 		break;
 	case SIGUSR1:
 		cleanup();
-		execlp(argv0, argv0);
+		execlp(argv0, argv0, NULL);
 		// we never get here anyway
 	}
 	return False;
@@ -298,7 +298,7 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 				target.y = windowStart.y + ydiff;
 
 				for (unsigned i = 0; i < move_modifiers_length; i++)
-					move_modifiers[i](&target);
+					move_modifiers[i](event.xmotion.window, &target);
 			} else {
 				// if center nonant clicked, always grow first
 				if (SIDE_CENTER(moveSide)) {
@@ -421,6 +421,8 @@ int main (int argc, char **argv, char **envp) {
 	char *title = "Pegasus Epsilon's Desktop Environment";
 	XChangeProperty(display, pede, XInternAtom(display, "_NET_WM_NAME", False),
 		atom[UTF8_STRING], 8, PropModeReplace, (void *)title, strlen(title));
+	XChangeProperty(display, pede, atom[_NET_WM_WINDOW_TYPE], atom[ATOM], 32,
+		PropModeReplace, (void *)&atom[_NET_WM_WINDOW_TYPE_DESKTOP], 1);
 	XStoreName(display, pede, title);
 	XChangeProperty(display, pede, atom[_NET_SUPPORTING_WM_CHECK],
 		atom[WINDOW], 32, PropModeReplace, (void *)&pede, 1);
