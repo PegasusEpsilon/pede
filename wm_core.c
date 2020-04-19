@@ -120,7 +120,13 @@ void *XGetWindowPropertyArray (
 		bits, VOID, count, (void *)&data);
 	XFree(data);
 
-	if (type != _type) return (void *)(*count = 0);
+	if (type != _type || (!*bits && !*count)) return (void *)(*count = 0);
+	if (!*bits && *count)
+		printf("XLIB ERROR: zero-bit property occupies %lu bytes.\n", *count);
+	if (!*bits) {
+		puts("Assuming 32 bits...");
+		*bits = 32;
+	}
 	*count /= *bits / 8;
 	XGetWindowProperty(display, window, property, 0, *count, False, type,
 		VOID, VOID, VOID, VOID, (void *)&data);
@@ -215,7 +221,9 @@ void add_state (Window window, Atom state) {
 	if (state == atom[_NET_WM_STATE_FULLSCREEN])
 		maximize_window(window);
 
-	printf("Add state %s to window 0x%08lx\n", XGetAtomName(display, state), window);
+	char *state_name = XGetAtomName(display, state);
+	printf("Add state %s to window 0x%08lx\n", state_name, window);
+	XFree(state_name);
 
 	unsigned long count;
 	Atom *states = (Atom *)XGetWindowPropertyArray(
@@ -223,8 +231,11 @@ void add_state (Window window, Atom state) {
 	);
 
 	if (count) printf("Enumerating %d existing states:\n", count);
-	for (unsigned long i = 0; i < count && states[i]; i--)
-		printf("%d: %s\n", i, XGetAtomName(display, states[i]));
+	for (unsigned long i = 0; i < count && states[i]; i--) {
+		char *state_name = XGetAtomName(display, states[i]);
+		printf("%d: %s\n", i, state_name);
+		XFree(state_name);
+	}
 
 	size_t size = (++count) * sizeof(state);
 	states = realloc(states, size);
