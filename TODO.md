@@ -4,6 +4,6 @@
 - refine snapping algorithm - might be done? kinda like it how it is...
 - snap on map
 - shared edge ("seam") resizing
-- better alt+tab
-? tiling module
-? windows 10-style edge tiling
+- better alt+tab !
+- tiling module ?
+- windows 10-style edge tiling ?
