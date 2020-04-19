@@ -57,7 +57,8 @@ void snap_to_center (Window sizing, char side, BOX *t) {
 		if (abs(center.x - target.x) < SNAP)
 			t->w = center.x - t->x;
 }
-void snap_to_siblings (Window sizing, char side, BOX *t) {
+
+static void snap_to_siblings (Window sizing, char side, BOX *t) {
 	Window *windows = NULL;
 	unsigned count;
 
@@ -65,7 +66,6 @@ void snap_to_siblings (Window sizing, char side, BOX *t) {
 	if (!windows) return;
 
 	// process sibling windows into pairs of points
-	typedef struct { unsigned x, y; } POINT;
 	POINT *siblings = NULL;
 	unsigned sibling_count = 0;
 	for (unsigned i = 0; i < count; i++) {
@@ -158,9 +158,8 @@ void snap_to_siblings (Window sizing, char side, BOX *t) {
 
 	free(siblings);
 }
-//void do_nothing (Window w, char s, BOX *b) {}
+
 void (*size_modifiers[])(Window sizing, char side, BOX *) = {
-	//do_nothing,
 	keep_on_screen,
 	snap_to_edges,
 	snap_to_siblings,
