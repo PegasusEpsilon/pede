@@ -61,8 +61,6 @@ void handle_key_events (XEvent event) {
 		} else if (event.xkey.keycode == keycodes[KcTab]) {
 			XGrabKeyboard(display, root.handle, False,
 				GrabModeAsync, GrabModeAsync, event.xkey.time);
-			// TODO: change this to manually select and raise
-			// the bottom window or lower the top window
 			XCirculateSubwindows(event.xkey.display, event.xkey.root,
 				event.xkey.state & Mod1Mask ? LowerHighest : RaiseLowest);
 		} else if (event.xkey.keycode == keycodes[KcR]) {

@@ -1,5 +1,10 @@
+- break everything out into modules - in progress/ongoing
+- more generalized keyboard shortcuts - in progress/ongoing
+- improve ICCCM and EWMH compliance/support - ongoing
 - move snapping to siblings
 - refine snapping algorithm
 - snap on map
 - shared edge ("seam") resizing
 - better alt+tab
+? tiling module
+? windows 10-style edge tiling
