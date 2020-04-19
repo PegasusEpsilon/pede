@@ -5,7 +5,7 @@
 */
 
 #include <X11/Xlib.h>
-#include <stdlib.h> 	// abs(), malloc(), free()
+#include <stdlib.h> 	// abs()
 #include <stdint.h> 	// uint32_t
 #include <stdio.h>  	// puts()
 

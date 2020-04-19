@@ -26,7 +26,10 @@ static char *keycode_names[] = {
 // this macro will break if used in any manner other than just
 // calling it as run("prog", "arg1", "arg2", ...);
 // I can't really think of a way around it, but it shouldn't matter?
-#define run(x, ...) if (!fork()) execlp(x, x, __VA_ARGS__, NULL)
+extern char *argv0;
+#define run(x, ...) \
+	if (!fork()) execlp(x, x, __VA_ARGS__, NULL); \
+	else execlp(argv0, argv0, NULL)
 
 void handle_key_events (XEvent event) {
 	switch(event.type) {
