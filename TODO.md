@@ -1,8 +1,7 @@
 - break everything out into modules - in progress/ongoing
 - more generalized keyboard shortcuts - in progress/ongoing
 - improve ICCCM and EWMH compliance/support - ongoing
-- move snapping to siblings
-- refine snapping algorithm
+- refine snapping algorithm - might be done? kinda like it how it is...
 - snap on map
 - shared edge ("seam") resizing
 - better alt+tab
