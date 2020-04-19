@@ -132,6 +132,10 @@ XGetWindowProperty returns the actual property type to actual_type_return
 and the actual property format (**never zero**) to actual_format_return.
 
 Emphasis mine.
+
+The source for libX11.so::GetProp.c::XGetWindowProperty seems to confirm that
+it will never intentionally do this, and will raise an error whenever the
+X server tries to do this, yet *somehow* this code still runs...
 */
 		printf("XLIB ERROR: Zero-bit property occupies %lu bytes.\n", *count);
 	if (!*bits) {
