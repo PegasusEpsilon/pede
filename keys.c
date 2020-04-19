@@ -4,6 +4,8 @@
 ** Distribute Unmodified - https://pegasus.pimpninjas.org/license
 */
 
+#define _XOPEN_SOURCE 500	// vfork()
+
 #include <X11/Xlib.h>
 #include <unistd.h>
 #include <stdint.h>
@@ -26,10 +28,7 @@ static char *keycode_names[] = {
 // this macro will break if used in any manner other than just
 // calling it as run("prog", "arg1", "arg2", ...);
 // I can't really think of a way around it, but it shouldn't matter?
-extern char *argv0;
-#define run(x, ...) \
-	if (!fork()) execlp(x, x, __VA_ARGS__, NULL); \
-	else execlp(argv0, argv0, NULL)
+#define run(x, ...) if (!vfork()) execlp(x, x, __VA_ARGS__, NULL); \
 
 void handle_key_events (XEvent event) {
 	switch(event.type) {
