@@ -284,7 +284,7 @@ void map_window (XMapRequestEvent *ev) {
 	unsigned char *workspace;
 
 	XGetWindowProperty(ev->display, ev->window, atom[_NET_WM_DESKTOP], 0,
-		BUFFER_LENGTH, False, atom[CARDINAL], VOID, VOID, &count, VOID, &workspace);
+		1, False, atom[CARDINAL], VOID, VOID, &count, VOID, &workspace);
 	if (count) {
 		printf("window 0x%08lx is apparently already on workspace %d\n", ev->window, *workspace);
 		return;
