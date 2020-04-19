@@ -12,8 +12,6 @@
 
 extern long long nul;
 #define VOID ((void *)&nul)
-#define BUFFER_LENGTH 512
-extern char buffer[BUFFER_LENGTH];
 extern Display *display;
 extern struct { Window handle; unsigned width, height; } root;
 extern Window pede;

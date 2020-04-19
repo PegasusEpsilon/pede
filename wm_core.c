@@ -14,8 +14,6 @@
 
 long long nul;
 #define VOID ((void *)&nul)
-#define BUFFER_LENGTH 512
-char buffer[BUFFER_LENGTH];
 Display *display;
 struct { Window handle; unsigned width, height; } root;
 Window pede;

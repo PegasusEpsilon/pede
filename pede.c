@@ -32,16 +32,21 @@
 #include "move_modifiers.h"
 #include "size_modifiers.h"
 
-// TODO: break everything out into modules, then write:
-// inter-window snapping/gluing, generalized keyboard shortcuts
-// better alt-tab, fullscreen support, window restoration after fullscreen,
-// vastly improve ICCCM and EWMH support...
-// tiling module? windows 10-style edge tiling?
-
+// XGetErrorText opens an XrmDatabase connection, closes it, allocates memory,
+// frees it, and leaks about a meg and a half somewhere along the way. It only
+// leaks once, the first time you call it, but we don't need to burn that RAM
+// anyway. We can do better.
+static const char *_XErrorList[] = {
+	"noerror", "BadRequest", "BadValue", "BadWindow", "BadPixmap", "BadAtom",
+	"BadCursor", "BadFont", "BadMatch", "BadDrawable", "BadAccess", "BadAlloc",
+	"BadColor", "BadGC", "BadIDChoice", "BadName", "BadLength",
+	"BadImplementation", "unknownerror"
+};
 int death_proof (Display *display, XErrorEvent *error) {
-	XGetErrorText(display, error->error_code, buffer, BUFFER_LENGTH-1);
-	printf("X request %d: Error %d/%d.%d: %s\n", error->serial, error->error_code,
-		error->request_code, error->minor_code, buffer);
+	if (18 < error->error_code) error->error_code = 18;
+	printf("X request %d: Error %d/%d.%d: %s\n", error->serial,
+		error->error_code, error->request_code, error->minor_code,
+		_XErrorList[error->error_code]);
 	fflush(stdout);
 	return 0;
 }
@@ -169,7 +174,8 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 					.border_width = event.xconfigurerequest.border_width,
 					.sibling = event.xconfigurerequest.above,
 					.stack_mode = event.xconfigurerequest.detail,
-				});
+				}
+			);
 			XSync(display, False);
 			break;
 		case Expose:
