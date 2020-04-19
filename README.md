@@ -1,6 +1,6 @@
 # Pegasus Epsilon's Desktop Environment (pede)
 
-![My current setup, showing pede taking a whopping 956kB of RAM](https://lh3.googleusercontent.com/rwtuRRqJVGeWGR11LKNZB3kfgP9U7b2hE_FsXQ_6VKiDkBjKJvSldJIX_JebVAWhUppetyGjaiZIWVA77Vbj0dNGPw-e85SG53IM8x4niosrPmlB4whiVOvYg89REkGZ3TUiYQfJ3QNldiJPqIWPUybs7eH9ivDxraRrw8ayqGeMeYz1xyHOrxCc6aYIFlDiQL2XjqwcIsZvQ-w6WmykysH88qgBQQ7UMKg5dRjmFexS60KwYRtNGetdJ1DmI90Ch0hAG8pwObdDWPf91nRoCL3JzprwM0Pqh0qVawTkCM7Gq-nT0-7F8yAQC4XBLHGR8aA6f84pTdT5S_SWLK2RjMrylSGzxgcfPvdKTxgKDZZr80c1KsE94rzExaTjS1bv27rRMFTISuzHn2rbuO3Dx_ZatasR9cjQTGkLQwWQ_-1CJUDhldC4m0eTFOfQZsKNoEFLfBCvbit9js74YY5D0VcKuj_bI8Cs04oYUQcNJsND80fkObmM4LfsKRLbn6TS7Im9ueRhM7FCz6BWxveXx4y7IOyxzHzSu6U0NZe4JzftfZUp5k_z3GAMV9kfLvvSSMrcj2Egst-L0TLIf4AaoIqrBSN_CrmGt5JEh6U5PcU0bL6AR9N6m9FKYtFDoREhRc7L158RiegUBzOmbkPYtIUwZ6yBME-H5z4bPiFlFjAv5v71neCPOobtyxaI5qc=w2560-h1080-no)
+![My current setup, showing pede taking a whopping 956kB of RAM](https://live.staticflickr.com/65535/49795270571_6f23c61ba4_o.png)
 
 Pegasus Epsilon's Desktop Environment (pede) is an attempt to build a better
 mousetrap. I think I'm doing a pretty decent job, honestly.
