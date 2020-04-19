@@ -208,10 +208,14 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 					focus_active_window();
 				}
 				XFree(prop);
-			} else // idfk...
+			} else {
+				// idfk...
+				char *state_name = XGetAtomName(display,
+					event.xclient.message_type);
 				printf("Received unmonitored client message: %s/%d\n",
-					XGetAtomName(display, event.xclient.message_type),
-					*event.xclient.data.l);
+					state_name, *event.xclient.data.l);
+				XFree(state_name);
+			}
 			break;
 		case MapRequest:
 			map_window(&event.xmaprequest);
