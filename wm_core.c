@@ -116,13 +116,24 @@ void *XGetWindowPropertyArray (
 	Atom _type;
 	void *data = NULL;
 
-	XGetWindowProperty(display, window, property, 0, 0, False, None, &_type,
-		bits, VOID, count, (void *)&data);
+	XGetWindowProperty(display, window, property, 0, 0, False, AnyPropertyType,
+		&_type, bits, VOID, count, (void *)&data);
 	XFree(data);
 
 	if (type != _type || (!*bits && !*count)) return (void *)(*count = 0);
 	if (!*bits && *count)
-		printf("XLIB ERROR: zero-bit property occupies %lu bytes.\n", *count);
+/*
+Let us read together from the book of XGetWindowProperty(3). For The LORD said,
+and I quote:
+
+If the specified property exists and either you assign AnyPropertyType to the
+req_type argument or the specified type matches the actual property type,
+XGetWindowProperty returns the actual property type to actual_type_return
+and the actual property format (**never zero**) to actual_format_return.
+
+Emphasis mine.
+*/
+		printf("XLIB ERROR: Zero-bit property occupies %lu bytes.\n", *count);
 	if (!*bits) {
 		puts("Assuming 32 bits...");
 		*bits = 32;
