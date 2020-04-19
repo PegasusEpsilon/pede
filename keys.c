@@ -30,6 +30,7 @@ static char *keycode_names[] = {
 // I can't really think of a way around it, but it shouldn't matter?
 #define run(x, ...) if (!vfork()) execlp(x, x, __VA_ARGS__, NULL); \
 
+static int prtscrn_state = None;
 void handle_key_events (XEvent event) {
 	switch(event.type) {
 	case KeyPress:
@@ -43,12 +44,21 @@ void handle_key_events (XEvent event) {
 				set_workspace(active_window(), workspace);
 			activate_workspace(workspace);
 		} else if (event.xkey.keycode == keycodes[KcPrint]) {
-			if ((event.xkey.state & ~Mod2Mask) == None) {
+			event.xkey.state &= ~Mod2Mask; // ignore numlock bit
+			if (event.xkey.state == None) {
 				run(PRTSCRN, PRTSCRN_ARGS);
 			} else if (event.xkey.state == ControlMask) {
-				run(PRTSCRN, CONTROL_PRTSCRN_ARGS);
+				puts("ctrl+prtsc");
+				prtscrn_state = event.xkey.state;
+				XGrabKeyboard(display, root.handle, False,
+					GrabModeAsync, GrabModeAsync, event.xkey.time);
+				XSync(display, False);
 			} else if (event.xkey.state == Mod4Mask) {
-				run(PRTSCRN, SUPER_PRTSCRN_ARGS);
+				puts("super+prtsc");
+				prtscrn_state = event.xkey.state;
+				XGrabKeyboard(display, root.handle, False,
+					GrabModeAsync, GrabModeAsync, event.xkey.time);
+				XSync(display, False);
 			}
 		} else if (
 			event.xkey.keycode == keycodes[KcLeft] &&
@@ -59,10 +69,11 @@ void handle_key_events (XEvent event) {
 				set_workspace(active_window(), workspace);
 			activate_workspace(workspace);
 		} else if (event.xkey.keycode == keycodes[KcTab]) {
-			XGrabKeyboard(display, root.handle, False,
-				GrabModeAsync, GrabModeAsync, event.xkey.time);
 			XCirculateSubwindows(event.xkey.display, event.xkey.root,
 				event.xkey.state & Mod1Mask ? LowerHighest : RaiseLowest);
+			XGrabKeyboard(display, root.handle, False,
+				GrabModeAsync, GrabModeAsync, event.xkey.time);
+			XSync(display, False);
 		} else if (event.xkey.keycode == keycodes[KcR]) {
 			run(RUNNER, RUNNERARGS);
 		} else if (event.xkey.keycode == keycodes[KcF4]) {
@@ -95,8 +106,37 @@ void handle_key_events (XEvent event) {
 		}
 		break;
 	case KeyRelease:
-		if (event.xkey.keycode == keycodes[KcAlt_L])
+		if (
+			event.xkey.keycode == keycodes[KcControl_L] ||
+			event.xkey.keycode == keycodes[KcControl_R]
+		) {
+			puts("ctrl released");
 			XUngrabKeyboard(display, event.xkey.time);
+			if (ControlMask == prtscrn_state) {
+				run(PRTSCRN, CONTROL_PRTSCRN_ARGS);
+				prtscrn_state = None;
+			}
+		}
+		if (
+			event.xkey.keycode == keycodes[KcSuper_L] ||
+			event.xkey.keycode == keycodes[KcSuper_R]
+		) {
+			puts("super released");
+			XUngrabKeyboard(display, event.xkey.time);
+			if (Mod4Mask == prtscrn_state) {
+				run(PRTSCRN, SUPER_PRTSCRN_ARGS);
+				prtscrn_state = None;
+			}
+		}
+		if (
+			event.xkey.keycode == keycodes[KcAlt_L] ||
+			event.xkey.keycode == keycodes[KcAlt_R]
+		) {
+			puts("alt released");
+			XUngrabKeyboard(display, event.xkey.time);
+			// finalize window restack
+		}
+		fflush(stdout);
 		break;
 	}
 }
