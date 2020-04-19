@@ -30,6 +30,15 @@
 #define LOWER_VOLUME "set-sink-volume", "@DEFAULT_SINK@", "-5%"
 #define TOGGLE_MUTE "set-sink-mute", "@DEFAULT_SINK@", "toggle"
 
+#define SCROT_ARGS \
+	"xclip -selection clipboard -t image/png -i $f;" \
+	"mv $f ~/Pictures/scrot"
+
+#define PRTSCRN "scrot"
+#define PRTSCRN_ARGS "-e", SCROT_ARGS
+#define SUPER_PRTSCRN_ARGS "-ue", SCROT_ARGS
+#define CONTROL_PRTSCRN_ARGS "-se", SCROT_ARGS
+
 // minimum window size (height and width) - do not go below 1
 #define MINIMUM_SIZE 100
 // snap distance, 0 to disable

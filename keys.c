@@ -23,6 +23,11 @@ static char *keycode_names[] = {
 #include "expandos.h"
 };
 
+// this macro will break if used in any manner other than just
+// calling it as run("prog", "arg1", "arg2", ...);
+// I can't really think of a way around it, but it shouldn't matter?
+#define run(x, ...) if (!fork()) execlp(x, x, __VA_ARGS__, NULL)
+
 void handle_key_events (XEvent event) {
 	switch(event.type) {
 	case KeyPress:
@@ -35,6 +40,14 @@ void handle_key_events (XEvent event) {
 			if (event.xkey.state & ShiftMask)
 				set_workspace(active_window(), workspace);
 			activate_workspace(workspace);
+		} else if (event.xkey.keycode == keycodes[KcPrint]) {
+			if ((event.xkey.state & ~Mod2Mask) == None) {
+				run(PRTSCRN, PRTSCRN_ARGS);
+			} else if (event.xkey.state == ControlMask) {
+				run(PRTSCRN, CONTROL_PRTSCRN_ARGS);
+			} else if (event.xkey.state == Mod4Mask) {
+				run(PRTSCRN, SUPER_PRTSCRN_ARGS);
+			}
 		} else if (
 			event.xkey.keycode == keycodes[KcLeft] &&
 			event.xkey.state & Mod4Mask
@@ -51,8 +64,7 @@ void handle_key_events (XEvent event) {
 			XCirculateSubwindows(event.xkey.display, event.xkey.root,
 				event.xkey.state & Mod1Mask ? LowerHighest : RaiseLowest);
 		} else if (event.xkey.keycode == keycodes[KcR]) {
-			if (!fork())
-				execlp(RUNNER, RUNNER, RUNNERARGS, NULL);
+			run(RUNNER, RUNNERARGS);
 		} else if (event.xkey.keycode == keycodes[KcF4]) {
 			close_window(active_window());
 		} else if (event.xkey.keycode == keycodes[Kc1]) {
@@ -72,14 +84,11 @@ void handle_key_events (XEvent event) {
 				set_workspace(active_window(), 3);
 			else activate_workspace(3);
 		} else if (event.xkey.keycode == keycodes[KcXF86AudioRaiseVolume]) {
-			if (!fork())
-				execlp(VOLUME_CONTROL, VOLUME_CONTROL, RAISE_VOLUME, NULL);
+			run(VOLUME_CONTROL, RAISE_VOLUME);
 		} else if (event.xkey.keycode == keycodes[KcXF86AudioLowerVolume]) {
-			if (!fork())
-				execlp(VOLUME_CONTROL, VOLUME_CONTROL, LOWER_VOLUME, NULL);
+			run(VOLUME_CONTROL, LOWER_VOLUME);
 		} else if (event.xkey.keycode == keycodes[KcXF86AudioMute]) {
-			if (!fork())
-				execlp(VOLUME_CONTROL, VOLUME_CONTROL, TOGGLE_MUTE, NULL);
+			run(VOLUME_CONTROL, TOGGLE_MUTE);
 		} else {
 			puts("caught unhandled keystroke, your KEY_EXPANDO list "
 				"is out of sync with keys.c");
@@ -111,6 +120,9 @@ void hook_keys (void) {
 	numlock_ignoring_hook(keycodes[KcXF86AudioRaiseVolume], None);
 	numlock_ignoring_hook(keycodes[KcXF86AudioLowerVolume], None);
 	numlock_ignoring_hook(keycodes[KcXF86AudioMute], None);
+	numlock_ignoring_hook(keycodes[KcPrint], ControlMask);
+	numlock_ignoring_hook(keycodes[KcPrint], Mod4Mask);
+	numlock_ignoring_hook(keycodes[KcPrint], None);
 	numlock_ignoring_hook(keycodes[KcRight], Mod4Mask | ShiftMask);
 	numlock_ignoring_hook(keycodes[KcLeft], Mod4Mask | ShiftMask);
 	numlock_ignoring_hook(keycodes[KcRight], Mod4Mask);
