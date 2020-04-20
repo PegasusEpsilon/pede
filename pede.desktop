@@ -1,0 +1,8 @@
+[Desktop Entry]
+Version=1.0
+Name=Pegasus Epsilon's Desktop Environment Session
+Comment=Use this session to run PEDE as your desktop environment
+Exec=/usr/bin/pede-session
+Icon=/usr/share/icons/hicolor/scalable/places/pede_badge-symbolic.svg
+Type=Application
+DesktopNames=pede

@@ -44,5 +44,9 @@ If you try pede, like it, work on it, whatever, let me know. I won't be
 accepting most pull requests, but I encourage you to make them anyway. If you
 make a change I like, I'll merge it. But know that the roadmap is in flux.
 
-
 Anyway, that's it. Go play with the code.
+
+Places files go on my system:
+- pede_badge-symbolic.svg in /usr/share/icons/hicolor/scalable/places/
+- pede.session in /usr/share/xsessions/
+
