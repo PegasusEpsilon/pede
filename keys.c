@@ -48,13 +48,11 @@ void handle_key_events (XEvent event) {
 			if (event.xkey.state == None) {
 				run(PRTSCRN, PRTSCRN_ARGS);
 			} else if (event.xkey.state == ControlMask) {
-				puts("ctrl+prtsc");
 				prtscrn_state = event.xkey.state;
 				XGrabKeyboard(display, root.handle, False,
 					GrabModeAsync, GrabModeAsync, event.xkey.time);
 				XSync(display, False);
 			} else if (event.xkey.state == Mod4Mask) {
-				puts("super+prtsc");
 				prtscrn_state = event.xkey.state;
 				XGrabKeyboard(display, root.handle, False,
 					GrabModeAsync, GrabModeAsync, event.xkey.time);
@@ -74,6 +72,8 @@ void handle_key_events (XEvent event) {
 			XGrabKeyboard(display, root.handle, False,
 				GrabModeAsync, GrabModeAsync, event.xkey.time);
 			XSync(display, False);
+		} else if (event.xkey.keycode == keycodes[KcL]) {
+			run(LOCKER, LOCKERARGS);
 		} else if (event.xkey.keycode == keycodes[KcR]) {
 			run(RUNNER, RUNNERARGS);
 		} else if (event.xkey.keycode == keycodes[KcF4]) {
@@ -110,7 +110,6 @@ void handle_key_events (XEvent event) {
 			event.xkey.keycode == keycodes[KcControl_L] ||
 			event.xkey.keycode == keycodes[KcControl_R]
 		) {
-			puts("ctrl released");
 			XUngrabKeyboard(display, event.xkey.time);
 			if (ControlMask == prtscrn_state) {
 				run(PRTSCRN, CONTROL_PRTSCRN_ARGS);
@@ -121,7 +120,6 @@ void handle_key_events (XEvent event) {
 			event.xkey.keycode == keycodes[KcSuper_L] ||
 			event.xkey.keycode == keycodes[KcSuper_R]
 		) {
-			puts("super released");
 			XUngrabKeyboard(display, event.xkey.time);
 			if (Mod4Mask == prtscrn_state) {
 				run(PRTSCRN, SUPER_PRTSCRN_ARGS);
@@ -132,7 +130,6 @@ void handle_key_events (XEvent event) {
 			event.xkey.keycode == keycodes[KcAlt_L] ||
 			event.xkey.keycode == keycodes[KcAlt_R]
 		) {
-			puts("alt released");
 			XUngrabKeyboard(display, event.xkey.time);
 			// finalize window restack
 		}
@@ -170,6 +167,7 @@ void hook_keys (void) {
 	numlock_ignoring_hook(keycodes[KcTab], Mod1Mask | ShiftMask);
 	numlock_ignoring_hook(keycodes[KcTab], Mod1Mask);
 	numlock_ignoring_hook(keycodes[KcF4], Mod1Mask);
+	numlock_ignoring_hook(keycodes[KcL], Mod4Mask);
 	numlock_ignoring_hook(keycodes[KcR], Mod4Mask);
 	numlock_ignoring_hook(keycodes[Kc1], Mod4Mask | ShiftMask);
 	numlock_ignoring_hook(keycodes[Kc2], Mod4Mask | ShiftMask);
