@@ -25,6 +25,47 @@ static char *keycode_names[] = {
 #include "expandos.h"
 };
 
+static Window *window_list = NULL;
+static unsigned focusing = 0, window_list_length = 0;
+static void page_end (void) {
+	XFree(window_list);
+	focusing = window_list_length = 0;
+	window_list = NULL;
+}
+static void page_previous (void) {
+	// this is 100% wrong, but it doesn't crash, so good enough for now.
+	// i'll keep pondering and come back to it.
+	if (1 >= window_list_length) return;
+	unsigned last = window_list_length - 1;
+	if (focusing == 0) {
+		XRaiseWindow(display, window_list[last]);
+		page_end();
+	} else {
+		focusing--;
+		window_list[last] ^= window_list[focusing];
+		window_list[focusing] ^= window_list[last];
+		window_list[last] ^= window_list[focusing];
+		XRestackWindows(display, window_list, window_list_length);
+	}
+	focus_active_window();
+}
+static void page_next (void) {
+	// this one works right, though...
+	if (1 >= window_list_length) return;
+	focusing++;
+	if (focusing == window_list_length) {
+		XLowerWindow(display, window_list[0]);
+		XLowerWindow(display, pede);
+		page_end();
+	} else {
+		window_list[0] ^= window_list[focusing];
+		window_list[focusing] ^= window_list[0];
+		window_list[0] ^= window_list[focusing];
+		XRestackWindows(display, window_list, window_list_length);
+	}
+	focus_active_window();
+}
+
 // this macro will break if used in any manner other than just
 // calling it as run("prog", "arg1", "arg2", ...);
 // I can't really think of a way around it, but it shouldn't matter?
@@ -67,8 +108,10 @@ void handle_key_events (XEvent event) {
 				set_workspace(active_window(), workspace);
 			activate_workspace(workspace);
 		} else if (event.xkey.keycode == keycodes[KcTab]) {
-			XCirculateSubwindows(event.xkey.display, event.xkey.root,
-				event.xkey.state & Mod1Mask ? LowerHighest : RaiseLowest);
+			if (!window_list)
+				window_list_length = visible_windows(&window_list);
+			if (event.xkey.state & ShiftMask) page_previous();
+			else page_next();
 			XGrabKeyboard(display, root.handle, False,
 				GrabModeAsync, GrabModeAsync, event.xkey.time);
 			XSync(display, False);
@@ -130,6 +173,7 @@ void handle_key_events (XEvent event) {
 			event.xkey.keycode == keycodes[KcAlt_L] ||
 			event.xkey.keycode == keycodes[KcAlt_R]
 		) {
+			page_end();
 			XUngrabKeyboard(display, event.xkey.time);
 			// finalize window restack
 		}

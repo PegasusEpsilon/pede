@@ -24,6 +24,7 @@ void set_workspace (Window, uint32_t);
 unsigned long XDeleteAtomFromArray (Atom *, unsigned long, Atom);
 void *XGetWindowPropertyArray (Window, Atom, Atom, unsigned long *);
 Bool XWindowPropertyArrayContains (Window, Atom, Atom);
+unsigned visible_windows(Window **windows);
 void close_window (Window);
 void remove_state (Window, Atom);
 void add_state (Window, Atom);

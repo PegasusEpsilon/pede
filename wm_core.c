@@ -110,6 +110,14 @@ unsigned long XDeleteAtomFromArray (
 	return --dst;
 }
 
+void *XGetWindowPropertyString (Window window, Atom property) {
+	void *data = NULL;
+
+	XGetWindowProperty(display, window, property, 0, 9999, False,
+		AnyPropertyType, VOID, VOID, VOID, VOID, (void *)&data);
+	return data;
+}
+
 void *XGetWindowPropertyArray (
 	Window window, Atom property, Atom type, unsigned long *count, int *bits
 ) {
@@ -151,16 +159,37 @@ X server tries to do this, yet *somehow* this code still runs...
 Bool XWindowPropertyArrayContains (Window window, Atom haystack, Atom needle) {
 	unsigned long i;
 	int bits;
-	Atom *data = XGetWindowPropertyArray(
-		window, haystack, atom[ATOM], &i, &bits
-	);
-	while (i--)
-		if (needle == data[i]) {
-			XFree(data);
-			return True;
-		}
+	Atom *data = XGetWindowPropertyArray(window, haystack, atom[ATOM], &i,
+		&bits);
+	while (i--) if (needle == data[i]) {
+		XFree(data);
+		return True;
+	}
 	XFree(data);
 	return False;
+}
+
+int visible_windows (Window **ret) {
+	Window *windows = NULL;
+	unsigned window_count;
+
+	XQueryTree(display, root.handle, VOID, VOID, &windows, &window_count);
+	if (!windows) return window_count;
+
+	Window *visible = NULL;
+	unsigned visible_count = 0;
+	for (unsigned i = window_count; i--;) {
+		XWindowAttributes attrs;
+		XGetWindowAttributes(display, windows[i], &attrs);
+		if (IsViewable != attrs.map_state || XWindowPropertyArrayContains(
+			windows[i], atom[_NET_WM_WINDOW_TYPE],
+			atom[_NET_WM_WINDOW_TYPE_DESKTOP])) continue;
+		visible = realloc(visible, (1 + visible_count) * sizeof(*visible));
+		visible[visible_count++] = windows[i];
+	}
+	XFree(windows);
+	*ret = visible;
+	return visible_count;
 }
 
 void close_window (Window window) {
@@ -312,6 +341,7 @@ void map_window (XMapRequestEvent *ev) {
 		1, False, atom[CARDINAL], VOID, VOID, &count, VOID, &workspace);
 	if (count) {
 		printf("window 0x%08lx is apparently already on workspace %d\n", ev->window, *workspace);
+		XFree(workspace);
 		return;
 	}
 	set_workspace(ev->window, active_workspace());

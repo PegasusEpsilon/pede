@@ -58,29 +58,6 @@ void snap_to_center (Window sizing, char side, BOX *t) {
 			t->w = center.x - t->x;
 }
 
-static int visible_windows (Window **ret) {
-	Window *windows = NULL;
-	unsigned window_count;
-
-	XQueryTree(display, root.handle, VOID, VOID, &windows, &window_count);
-	if (!windows) return window_count;
-
-	Window *visible = NULL;
-	unsigned visible_count = 0;
-	for (unsigned i = 0; i < window_count; i++) {
-		XWindowAttributes attrs;
-		XGetWindowAttributes(display, windows[i], &attrs);
-		if (IsViewable != attrs.map_state) continue;
-		if (XWindowPropertyArrayContains(windows[i], atom[_NET_WM_WINDOW_TYPE],
-			atom[_NET_WM_WINDOW_TYPE_DESKTOP])) continue;
-		visible = realloc(visible, (1 + visible_count) * sizeof(*visible));
-		visible[visible_count++] = windows[i];
-	}
-	XFree(windows);
-	*ret = visible;
-	return visible_count;
-}
-
 static void snap_to_siblings (Window sizing, char side, BOX *t) {
 	Window *windows = NULL;
 	unsigned count = visible_windows(&windows);
