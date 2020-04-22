@@ -58,21 +58,38 @@ void snap_to_center (Window sizing, char side, BOX *t) {
 			t->w = center.x - t->x;
 }
 
+static int visible_windows (Window **ret) {
+	Window *windows = NULL;
+	unsigned window_count;
+
+	XQueryTree(display, root.handle, VOID, VOID, &windows, &window_count);
+	if (!windows) return window_count;
+
+	Window *visible = NULL;
+	unsigned visible_count = 0;
+	for (unsigned i = 0; i < window_count; i++) {
+		XWindowAttributes attrs;
+		XGetWindowAttributes(display, windows[i], &attrs);
+		if (IsViewable != attrs.map_state) continue;
+		if (XWindowPropertyArrayContains(windows[i], atom[_NET_WM_WINDOW_TYPE],
+			atom[_NET_WM_WINDOW_TYPE_DESKTOP])) continue;
+		visible = realloc(visible, (1 + visible_count) * sizeof(*visible));
+		visible[visible_count++] = windows[i];
+	}
+	XFree(windows);
+	*ret = visible;
+	return visible_count;
+}
+
 static void snap_to_siblings (Window sizing, char side, BOX *t) {
 	Window *windows = NULL;
-	unsigned count;
-
-	XQueryTree(display, root.handle, VOID, VOID, &windows, &count);
-	if (!windows) return;
+	unsigned count = visible_windows(&windows);
 
 	// process sibling windows into pairs of points
 	POINT *siblings = NULL;
 	unsigned sibling_count = 0;
 	for (unsigned i = 0; i < count; i++) {
 		if (sizing == windows[i]) continue;
-		XWindowAttributes attrs;
-		XGetWindowAttributes(display, windows[i], &attrs);
-		if (IsViewable != attrs.map_state) continue;
 		siblings = realloc(siblings, (2 + sibling_count) * sizeof(*siblings));
 		XGetGeometry(display, windows[i], VOID,
 			(signed *)&siblings[sibling_count].x,
@@ -82,11 +99,8 @@ static void snap_to_siblings (Window sizing, char side, BOX *t) {
 		siblings[sibling_count + 1].x += siblings[sibling_count].x;
 		siblings[sibling_count + 1].y += siblings[sibling_count].y;
 		printf("window 0x%08lx occupies space from %d to %d, %d to %d\n",
-			windows[i],
-			siblings[sibling_count].x,
-			siblings[sibling_count].y,
-			siblings[sibling_count + 1].x,
-			siblings[sibling_count + 1].y
+			windows[i], siblings[sibling_count].x, siblings[sibling_count].y,
+			siblings[sibling_count + 1].x, siblings[sibling_count + 1].y
 		);
 		sibling_count += 2;
 	}
