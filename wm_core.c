@@ -288,12 +288,19 @@ void add_state (Window window, Atom state) {
 	XFree(states);
 }
 
-void toggle_fullscreen (void) {
+void toggle_fullscreen (Bool alt_fullscreen) {
 	Window w = active_window();
 	Atom f = atom[_NET_WM_STATE_FULLSCREEN];
 	if (XWindowPropertyArrayContains(w, atom[_NET_WM_STATE], f))
 		remove_state(w, f);
-	else add_state(w, f);
+	else {
+		add_state(w, f);
+		if (alt_fullscreen)
+			XMoveResizeWindow(display, w,
+				(root.width - ALT_FULLSCREEN_WIDTH) / 2,
+				(root.height - ALT_FULLSCREEN_HEIGHT) / 2,
+				ALT_FULLSCREEN_WIDTH, ALT_FULLSCREEN_HEIGHT);
+	}
 }
 
 void alter_window_state (XClientMessageEvent event) {

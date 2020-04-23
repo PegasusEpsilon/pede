@@ -47,4 +47,7 @@
 // snap distance, 0 to disable
 #define SNAP 25
 
+#define ALT_FULLSCREEN_WIDTH 1920
+#define ALT_FULLSCREEN_HEIGHT 1080
+
 #endif // CONFIG_H

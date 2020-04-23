@@ -25,7 +25,7 @@ unsigned long XDeleteAtomFromArray (Atom *, unsigned long, Atom);
 void *XGetWindowPropertyArray (Window, Atom, Atom, unsigned long *);
 Bool XWindowPropertyArrayContains (Window, Atom, Atom);
 unsigned visible_windows(Window **windows);
-void toggle_fullscreen (void);
+void toggle_fullscreen (Bool);
 void close_window (Window);
 void remove_state (Window, Atom);
 void add_state (Window, Atom);

@@ -33,19 +33,16 @@ static void page_end (void) {
 	window_list = NULL;
 }
 static void page_previous (void) {
-	// this is 100% wrong, but it doesn't crash, so good enough for now.
-	// i'll keep pondering and come back to it.
 	if (1 >= window_list_length) return;
-	unsigned last = window_list_length - 1;
-	if (focusing == 0) {
-		XRaiseWindow(display, window_list[last]);
+	if (!focusing) {
+		XRaiseWindow(display, window_list[window_list_length - 1]);
 		page_end();
 	} else {
-		focusing--;
-		window_list[last] ^= window_list[focusing];
-		window_list[focusing] ^= window_list[last];
-		window_list[last] ^= window_list[focusing];
+		window_list[0] ^= window_list[focusing];
+		window_list[focusing] ^= window_list[0];
+		window_list[0] ^= window_list[focusing];
 		XRestackWindows(display, window_list, window_list_length);
+		focusing--;
 	}
 	focus_active_window();
 }
@@ -108,8 +105,11 @@ void handle_key_events (XEvent event) {
 				set_workspace(active_window(), workspace);
 			activate_workspace(workspace);
 		} else if (event.xkey.keycode == keycodes[KcTab]) {
-			if (!window_list)
+			if (!window_list) {
 				window_list_length = visible_windows(&window_list);
+				if (event.xkey.state & ShiftMask)
+					focusing = window_list_length - 1;
+			}
 			if (event.xkey.state & ShiftMask) page_previous();
 			else page_next();
 			XGrabKeyboard(display, root.handle, False,
@@ -143,7 +143,8 @@ void handle_key_events (XEvent event) {
 			run(VOLUME_CONTROL, LOWER_VOLUME);
 		} else if (event.xkey.keycode == keycodes[KcXF86AudioMute]) {
 			run(VOLUME_CONTROL, TOGGLE_MUTE);
-		} else if (event.xkey.keycode == keycodes[KcUp]) toggle_fullscreen();
+		} else if (event.xkey.keycode == keycodes[KcUp])
+			toggle_fullscreen(event.xkey.state & Mod1Mask ? True : False);
 		else puts("caught unhandled keystroke, your KEY_EXPANDO list "
 				"may be out of sync with keys.c");
 		break;
@@ -207,6 +208,7 @@ void hook_keys (void) {
 	numlock_ignoring_hook(keycodes[KcLeft], Mod4Mask | ShiftMask);
 	numlock_ignoring_hook(keycodes[KcRight], Mod4Mask);
 	numlock_ignoring_hook(keycodes[KcLeft], Mod4Mask);
+	numlock_ignoring_hook(keycodes[KcUp], Mod1Mask | Mod4Mask);
 	numlock_ignoring_hook(keycodes[KcUp], Mod4Mask);
 	numlock_ignoring_hook(keycodes[KcTab], Mod1Mask | ShiftMask);
 	numlock_ignoring_hook(keycodes[KcTab], Mod1Mask);
