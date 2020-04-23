@@ -143,10 +143,9 @@ void handle_key_events (XEvent event) {
 			run(VOLUME_CONTROL, LOWER_VOLUME);
 		} else if (event.xkey.keycode == keycodes[KcXF86AudioMute]) {
 			run(VOLUME_CONTROL, TOGGLE_MUTE);
-		} else {
-			puts("caught unhandled keystroke, your KEY_EXPANDO list "
-				"is out of sync with keys.c");
-		}
+		} else if (event.xkey.keycode == keycodes[KcUp]) toggle_fullscreen();
+		else puts("caught unhandled keystroke, your KEY_EXPANDO list "
+				"may be out of sync with keys.c");
 		break;
 	case KeyRelease:
 		if (
@@ -208,6 +207,7 @@ void hook_keys (void) {
 	numlock_ignoring_hook(keycodes[KcLeft], Mod4Mask | ShiftMask);
 	numlock_ignoring_hook(keycodes[KcRight], Mod4Mask);
 	numlock_ignoring_hook(keycodes[KcLeft], Mod4Mask);
+	numlock_ignoring_hook(keycodes[KcUp], Mod4Mask);
 	numlock_ignoring_hook(keycodes[KcTab], Mod1Mask | ShiftMask);
 	numlock_ignoring_hook(keycodes[KcTab], Mod1Mask);
 	numlock_ignoring_hook(keycodes[KcF4], Mod1Mask);

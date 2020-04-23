@@ -288,6 +288,14 @@ void add_state (Window window, Atom state) {
 	XFree(states);
 }
 
+void toggle_fullscreen (void) {
+	Window w = active_window();
+	Atom f = atom[_NET_WM_STATE_FULLSCREEN];
+	if (XWindowPropertyArrayContains(w, atom[_NET_WM_STATE], f))
+		remove_state(w, f);
+	else add_state(w, f);
+}
+
 void alter_window_state (XClientMessageEvent event) {
 	switch (event.data.l[0]) {
 		case 0: // remove
