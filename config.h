@@ -20,8 +20,8 @@
 #define RUNNER "xfrun4"
 #define RUNNERARGS "--disable-server"
 
-#define LOCKER "xscreensaver-command"
-#define LOCKERARGS "-lock"
+#define LOCKER "dm-tool"
+#define LOCKERARGS "lock"
 
 // VOLUME_CONTROL should be the name of the program you want to use
 // to control your system volume. Good examples are pactl or amixer

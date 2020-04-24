@@ -22,7 +22,6 @@ pushd $HOME
 /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1 &
 /usr/bin/start-pulseaudio-x11 &
 /usr/bin/ibus-daemon --xim &
-/usr/bin/xscreensaver &
 /usr/bin/xcompmgr &
 /usr/bin/numlockx &
 /usr/bin/xbanish &
