@@ -182,10 +182,14 @@ void handle_key_events (XEvent event) {
 	}
 }
 
-static void numlock_ignoring_hook (int kc, unsigned mod) {
-	XGrabKey(display, kc, Mod2Mask | mod, root.handle, True,
+static void lock_ignoring_hook (int kc, unsigned mod) {
+	XGrabKey(display, kc, LockMask | Mod2Mask | mod, root.handle, True,
 		GrabModeAsync, GrabModeAsync);
-	XGrabKey(display, kc,            mod, root.handle, True,
+	XGrabKey(display, kc, LockMask |            mod, root.handle, True,
+		GrabModeAsync, GrabModeAsync);
+	XGrabKey(display, kc,            Mod2Mask | mod, root.handle, True,
+		GrabModeAsync, GrabModeAsync);
+	XGrabKey(display, kc,                       mod, root.handle, True,
 		GrabModeAsync, GrabModeAsync);
 }
 
@@ -198,29 +202,29 @@ void hook_keys (void) {
 #define KEY_EXPANDO(x) keycodes[Kc ## x] = XKeysymToKeycode(display, XStringToKeysym(keycode_names[Kc ## x]));
 #include "expandos.h"
 
-	numlock_ignoring_hook(keycodes[KcXF86AudioRaiseVolume], None);
-	numlock_ignoring_hook(keycodes[KcXF86AudioLowerVolume], None);
-	numlock_ignoring_hook(keycodes[KcXF86AudioMute], None);
-	numlock_ignoring_hook(keycodes[KcPrint], ControlMask);
-	numlock_ignoring_hook(keycodes[KcPrint], Mod4Mask);
-	numlock_ignoring_hook(keycodes[KcPrint], None);
-	numlock_ignoring_hook(keycodes[KcRight], Mod4Mask | ShiftMask);
-	numlock_ignoring_hook(keycodes[KcLeft], Mod4Mask | ShiftMask);
-	numlock_ignoring_hook(keycodes[KcRight], Mod4Mask);
-	numlock_ignoring_hook(keycodes[KcLeft], Mod4Mask);
-	numlock_ignoring_hook(keycodes[KcUp], Mod1Mask | Mod4Mask);
-	numlock_ignoring_hook(keycodes[KcUp], Mod4Mask);
-	numlock_ignoring_hook(keycodes[KcTab], Mod1Mask | ShiftMask);
-	numlock_ignoring_hook(keycodes[KcTab], Mod1Mask);
-	numlock_ignoring_hook(keycodes[KcF4], Mod1Mask);
-	numlock_ignoring_hook(keycodes[KcL], Mod4Mask);
-	numlock_ignoring_hook(keycodes[KcR], Mod4Mask);
-	numlock_ignoring_hook(keycodes[Kc1], Mod4Mask | ShiftMask);
-	numlock_ignoring_hook(keycodes[Kc2], Mod4Mask | ShiftMask);
-	numlock_ignoring_hook(keycodes[Kc3], Mod4Mask | ShiftMask);
-	numlock_ignoring_hook(keycodes[Kc4], Mod4Mask | ShiftMask);
-	numlock_ignoring_hook(keycodes[Kc1], Mod4Mask);
-	numlock_ignoring_hook(keycodes[Kc2], Mod4Mask);
-	numlock_ignoring_hook(keycodes[Kc3], Mod4Mask);
-	numlock_ignoring_hook(keycodes[Kc4], Mod4Mask);
+	lock_ignoring_hook(keycodes[KcXF86AudioRaiseVolume], None);
+	lock_ignoring_hook(keycodes[KcXF86AudioLowerVolume], None);
+	lock_ignoring_hook(keycodes[KcXF86AudioMute], None);
+	lock_ignoring_hook(keycodes[KcPrint], ControlMask);
+	lock_ignoring_hook(keycodes[KcPrint], Mod4Mask);
+	lock_ignoring_hook(keycodes[KcPrint], None);
+	lock_ignoring_hook(keycodes[KcRight], Mod4Mask | ShiftMask);
+	lock_ignoring_hook(keycodes[KcLeft], Mod4Mask | ShiftMask);
+	lock_ignoring_hook(keycodes[KcRight], Mod4Mask);
+	lock_ignoring_hook(keycodes[KcLeft], Mod4Mask);
+	lock_ignoring_hook(keycodes[KcUp], Mod1Mask | Mod4Mask);
+	lock_ignoring_hook(keycodes[KcUp], Mod4Mask);
+	lock_ignoring_hook(keycodes[KcTab], Mod1Mask | ShiftMask);
+	lock_ignoring_hook(keycodes[KcTab], Mod1Mask);
+	lock_ignoring_hook(keycodes[KcF4], Mod1Mask);
+	lock_ignoring_hook(keycodes[KcL], Mod4Mask);
+	lock_ignoring_hook(keycodes[KcR], Mod4Mask);
+	lock_ignoring_hook(keycodes[Kc1], Mod4Mask | ShiftMask);
+	lock_ignoring_hook(keycodes[Kc2], Mod4Mask | ShiftMask);
+	lock_ignoring_hook(keycodes[Kc3], Mod4Mask | ShiftMask);
+	lock_ignoring_hook(keycodes[Kc4], Mod4Mask | ShiftMask);
+	lock_ignoring_hook(keycodes[Kc1], Mod4Mask);
+	lock_ignoring_hook(keycodes[Kc2], Mod4Mask);
+	lock_ignoring_hook(keycodes[Kc3], Mod4Mask);
+	lock_ignoring_hook(keycodes[Kc4], Mod4Mask);
 }
