@@ -458,7 +458,7 @@ int main (int argc, char **argv, char **envp) {
 		atom[CARDINAL], 32, PropModeReplace, (void *)"\4\0\0\0", 1);
 	// FIXME: EWMH this should contain an actual managed window list.
 	XChangeProperty(display, root.handle,
-		XInternAtom(display, "_NET_CLIENT_LIST", False), atom[ATOM],
+		XInternAtom(display, "_NET_CLIENT_LIST", False), atom[WINDOW],
 		32, PropModeReplace, (void *)&pede, 1);
 
 	// subscribe to events we actually care about
@@ -474,7 +474,7 @@ int main (int argc, char **argv, char **envp) {
 	hook_keys();
 
 	// Button9 (my thumb button) = move window
-	numlock_doesnt_matter(Button9, None);
+	//numlock_doesnt_matter(Button9, None);
 	// left click = raise window
 	numlock_doesnt_matter(Button1, None);
 	// super+left = move window
