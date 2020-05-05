@@ -19,10 +19,10 @@ pushd $HOME
 /usr/bin/xset -dpms s off &
 
 # start some daemons
+/usr/bin/xcompmgr &
 /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1 &
 /usr/bin/start-pulseaudio-x11 &
 /usr/bin/ibus-daemon --xim &
-/usr/bin/xcompmgr &
 /usr/bin/numlockx &
 /usr/bin/xbanish &
 
