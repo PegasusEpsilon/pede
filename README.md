@@ -48,5 +48,4 @@ Anyway, that's it. Go play with the code.
 
 Places files go on my system:
 - pede_badge-symbolic.svg in /usr/share/icons/hicolor/scalable/places/
-- pede.session in /usr/share/xsessions/
-
+- pede.desktop in /usr/share/xsessions/
