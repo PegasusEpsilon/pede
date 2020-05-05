@@ -32,6 +32,9 @@
 #include "move_modifiers.h"
 #include "size_modifiers.h"
 
+Window *clients;
+unsigned clients_count;
+
 // XGetErrorText opens an XrmDatabase connection, closes it, allocates memory,
 // frees it, and leaks about a meg and a half somewhere along the way. It only
 // leaks once, the first time you call it, but we don't need to burn that RAM
@@ -220,11 +223,36 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 			}
 			break;
 		case MapRequest:
+			clients = realloc(clients, sizeof(*clients) * (clients_count + 1));
+			clients[clients_count] = event.xmaprequest.window;
+			clients_count++;
+			XChangeProperty(display, root.handle,
+				atom[_NET_CLIENT_LIST], atom[WINDOW], 32, PropModeReplace,
+				(void *)clients, clients_count);
 			map_window(&event.xmaprequest);
 			set_workspace(event.xmaprequest.window, active_workspace());
 			focus_window(event.xmaprequest.window);
+			printf("Window 0x%08lx mapped\n", event.xmaprequest.window);
 			break;
-		case DestroyNotify: // fall through
+		case DestroyNotify: {
+			puts("destroynotify event:");
+			printf("serial: %lu\n", event.xdestroywindow.serial);
+			printf("send_event: %d\n", event.xdestroywindow.send_event);
+			printf("display: 0x%lx\n", event.xdestroywindow.display);
+			printf("event: 0x%08lx\n", event.xdestroywindow.event);
+			printf("window: 0x%08lx\n", event.xdestroywindow.window);
+			unsigned new_count = XDeleteWindowFromArray(clients,
+				clients_count, event.xdestroywindow.window);
+			if (new_count != clients_count) {
+				clients_count = new_count;
+				clients = realloc(clients, new_count * sizeof(*clients));
+				XChangeProperty(display, root.handle,
+					atom[_NET_CLIENT_LIST], atom[WINDOW], 32,
+					PropModeReplace, (void *)clients, new_count);
+				printf("Window 0x%08lx destroyed\n",
+					event.xdestroywindow.window);
+			}
+		} // fall through
 		case CirculateNotify:
 			focus_active_window();
 			break;
@@ -242,8 +270,7 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 			}
 			if (pede == event.xbutton.subwindow) return;
 			XRaiseWindow(display, event.xbutton.subwindow);
-			XSetInputFocus(display, event.xbutton.subwindow,
-				RevertToParent, event.xbutton.time);
+			focus_window(event.xbutton.subwindow);
 			if (!(event.xbutton.state & ~Mod2Mask)
 				&& Button9 != event.xbutton.button) {
 				XAllowEvents(display, ReplayPointer, event.xbutton.time);
@@ -456,10 +483,9 @@ int main (int argc, char **argv, char **envp) {
 	XChangeProperty(display, root.handle,
 		XInternAtom(display, "_NET_NUMBER_OF_DESKTOPS", False),
 		atom[CARDINAL], 32, PropModeReplace, (void *)"\4\0\0\0", 1);
-	// FIXME: EWMH this should contain an actual managed window list.
-	XChangeProperty(display, root.handle,
-		XInternAtom(display, "_NET_CLIENT_LIST", False), atom[WINDOW],
-		32, PropModeReplace, (void *)&pede, 1);
+	// FIXME: EWMH this should contain an actual managed window list from startup
+	XChangeProperty(display, root.handle, atom[_NET_CLIENT_LIST], atom[WINDOW],
+		32, PropModeReplace, VOID, 0);
 
 	// subscribe to events we actually care about
 	// if the WM being replaced destroys their input selection holding window

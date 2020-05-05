@@ -21,7 +21,6 @@ void focus_window (Window);
 void focus_active_window (void);
 void activate_workspace (const uint32_t);
 void set_workspace (Window, uint32_t);
-unsigned long XDeleteAtomFromArray (Atom *, unsigned long, Atom);
 void *XGetWindowPropertyArray (Window, Atom, Atom, unsigned long *);
 Bool XWindowPropertyArrayContains (Window, Atom, Atom);
 unsigned visible_windows(Window **windows);

@@ -1,5 +1,7 @@
 *.o
 pede
+data_sizes
+data_sizes.h
 pede.log
 utils
 pasture

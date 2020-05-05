@@ -11,6 +11,7 @@
 
 #include "atoms.h"
 #include "config.h"
+#include "util.h"
 
 long long nul;
 #define VOID ((void *)&nul)
@@ -96,18 +97,6 @@ void set_workspace (Window window, uint32_t workspace) {
 	XChangeProperty(display, window, atom[_NET_WM_DESKTOP], atom[CARDINAL],
 		32, PropModeReplace, (void *)&workspace, 1);
 	activate_workspace(active_workspace());
-}
-
-unsigned long XDeleteAtomFromArray (
-	Atom *array, unsigned long length, Atom element
-) {
-	unsigned long src = 0, dst = 0;
-	while (length && src < length) {
-		while (src < length && array[src] == element) src++;
-		if (src < length && src != dst) array[dst] = array[src];
-		src++; dst++;
-	}
-	return --dst;
 }
 
 void *XGetWindowPropertyString (Window window, Atom property) {
