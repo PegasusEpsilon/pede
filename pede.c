@@ -271,6 +271,7 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 			if (pede == event.xbutton.subwindow) return;
 			XRaiseWindow(display, event.xbutton.subwindow);
 			focus_window(event.xbutton.subwindow);
+			XSync(display, False);
 			if (!(event.xbutton.state & ~Mod2Mask)
 				&& Button9 != event.xbutton.button) {
 				XAllowEvents(display, ReplayPointer, event.xbutton.time);
