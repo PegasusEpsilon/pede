@@ -8,6 +8,9 @@ export GTK_MODULES=canberra-gtk-module
 
 # not config
 export GTK2_RC_FILES=/usr/share/themes/$GTK_THEME/gtk-2.0/gtkrc
+export GTK_IM_MODULE=xim
+export QT_IM_MODULE=xim
+export XMODIFIERS=@im=ibus
 export XAUTHORITY=$HOME/.Xauthority
 
 # make sure new processes start somewhere sensible
