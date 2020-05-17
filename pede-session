@@ -23,6 +23,7 @@ pushd $HOME
 
 # start some daemons
 /usr/bin/xcompmgr &
+/usr/bin/xscreensaver &
 /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1 &
 /usr/bin/start-pulseaudio-x11 &
 /usr/bin/ibus-daemon --xim &
