@@ -19,97 +19,6 @@ Display *display;
 struct { Window handle; unsigned width, height; } root;
 Window pede;
 
-unsigned char active_workspace (void) {
-	uint32_t ret, *workspace = NULL;
-	XGetWindowProperty(display, root.handle, atom[_NET_CURRENT_DESKTOP], 0,
-		1, False, atom[CARDINAL], VOID, VOID, VOID, VOID, (void *)&workspace);
-	ret = workspace ? *workspace : 0;
-	XFree(workspace);
-	return ret;
-}
-
-Window active_window (void) {
-	Window *list;
-	Window active = None;
-	unsigned count = 0;
-	XWindowAttributes attrs;
-
-	XQueryTree(display, root.handle, VOID, VOID, &list, &count);
-	for (int i = count; i && list[--i];) {
-		XGetWindowAttributes(display, list[i], &attrs);
-		// Setting focus on withdrawn/iconified windows is an error.
-		// Always consider them inactive.
-		if (IsViewable == attrs.map_state) {
-			active = list[i];
-			break;
-		}
-	}
-	XFree(list);
-	return active;
-}
-
-void focus_window (Window window) {
-	if (window == pede) return;
-	XSetInputFocus(display, window, RevertToParent, CurrentTime);
-	XChangeProperty(display, root.handle, atom[_NET_ACTIVE_WINDOW],
-		atom[WINDOW], 32, PropModeReplace, (void *)&window, 1);
-}
-
-void focus_active_window (void) {
-	XLowerWindow(display, pede);
-	Window active = active_window();
-	if (pede == active || 0 == active) return;
-	focus_window(active);
-}
-
-void activate_workspace (const uint32_t which) {
-	Window *windows = NULL;
-	unsigned count;
-
-	if ((uint32_t)-1 != which)
-		XChangeProperty(display, root.handle, atom[_NET_CURRENT_DESKTOP],
-			atom[CARDINAL], 32, PropModeReplace, (void *)&which, 1);
-
-	if (!XQueryTree(display, root.handle, VOID, VOID, &windows,
-		&count)) return;
-
-	for (int i = 0; i < count; i++) {
-		uint32_t *workspace = NULL;
-		XGetWindowProperty(display, windows[i], atom[_NET_WM_DESKTOP], 0, 1,
-			False, atom[CARDINAL], VOID, VOID, VOID, VOID, (void *)&workspace);
-		if (!workspace) continue;
-		if (which == *workspace
-			|| (uint32_t)-1 == *workspace
-			|| (uint32_t)-1 == which)
-			XMapWindow(display, windows[i]);
-		else XUnmapWindow(display, windows[i]);
-		XFree(workspace);
-	}
-
-	XFree(windows);
-
-	XRaiseWindow(display, active_window());
-	focus_active_window();
-}
-
-void set_workspace (Window window, uint32_t workspace) {
-	if (window == pede) return;
-	if (XWindowPropertyArrayContains(
-		window, atom[_NET_WM_STATE], atom[_NET_WM_STATE_STICKY]
-	)) workspace = -1;
-	XChangeProperty(display, window, atom[_NET_WM_DESKTOP], atom[CARDINAL],
-		32, PropModeReplace, (void *)&workspace, 1);
-	activate_workspace(active_workspace());
-}
-
-void *XGetWindowPropertyString (Window window, Atom property) {
-	void *data = NULL;
-
-	XGetWindowProperty(display, window, property, 0, 9999, False,
-		AnyPropertyType, VOID, VOID, VOID, VOID, (void *)&data);
-	return data;
-}
-
 void *XGetWindowPropertyArray (
 	Window window, Atom property, Atom type, unsigned long *count, int *bits
 ) {
@@ -161,41 +70,71 @@ Bool XWindowPropertyArrayContains (Window window, Atom haystack, Atom needle) {
 	return False;
 }
 
-int visible_windows (Window **ret) {
-	Window *windows = NULL;
-	unsigned window_count;
-
-	XQueryTree(display, root.handle, VOID, VOID, &windows, &window_count);
-	if (!windows) return window_count;
-
-	Window *visible = NULL;
-	unsigned visible_count = 0;
-	for (unsigned i = window_count; i--;) {
-		XWindowAttributes attrs;
-		XGetWindowAttributes(display, windows[i], &attrs);
-		if (IsViewable != attrs.map_state || XWindowPropertyArrayContains(
-			windows[i], atom[_NET_WM_WINDOW_TYPE],
-			atom[_NET_WM_WINDOW_TYPE_DESKTOP])) continue;
-		visible = realloc(visible, (1 + visible_count) * sizeof(*visible));
-		visible[visible_count++] = windows[i];
-	}
-	XFree(windows);
-	*ret = visible;
-	return visible_count;
+unsigned char active_workspace (void) {
+	uint32_t ret, *workspace = NULL;
+	XGetWindowProperty(display, root.handle, atom[_NET_CURRENT_DESKTOP], 0,
+		1, False, atom[CARDINAL], VOID, VOID, VOID, VOID, (void *)&workspace);
+	ret = workspace ? *workspace : 0;
+	XFree(workspace);
+	return ret;
 }
 
-void close_window (Window window) {
-	if (XWindowPropertyArrayContains(
-		window, atom[WM_PROTOCOLS], atom[WM_DELETE_WINDOW]
-	)) XSendEvent(
-		display, window, False, NoEventMask, (XEvent *)&(XClientMessageEvent){
-			.type = ClientMessage, .display = display,
-			.window = window, .message_type = atom[WM_PROTOCOLS],
-			.format = 32, .data.l = { atom[WM_DELETE_WINDOW] }
+Window active_window (void) {
+	Window *list;
+	Window active = None;
+	unsigned count = 0;
+	XWindowAttributes attrs;
+
+	XQueryTree(display, root.handle, VOID, VOID, &list, &count);
+	for (int i = count; i && list[--i];) {
+		XGetWindowAttributes(display, list[i], &attrs);
+		// Setting focus on withdrawn/iconified windows is an error.
+		// Always consider them inactive.
+		if (IsViewable == attrs.map_state) {
+			active = list[i];
+			break;
 		}
-	);
-	//else XKillClient(display, window);
-	else XDestroyWindow(display, window);
+	}
+	XFree(list);
+	return active;
+}
+
+void focus_window (Window window) {
+	printf("Focusing window 0x%08x\n", window);
+	if (window == pede) return;
+	printf("window is not pede\n");
+	Atom *prop = NULL;
+	XGetWindowProperty(display, window, atom[_NET_WM_WINDOW_TYPE], 0, 32, False,
+		atom[ATOM], VOID, VOID, VOID, VOID, (void *)&prop);
+	if (prop) {
+		printf("prop address: 0x%08x\n", prop);
+		fflush(stdout);
+		printf("_NET_WM_WINDOW_TYPE: %d\n", *prop);
+		fflush(stdout);
+		printf("Looking for: %d\n", atom[_NET_WM_WINDOW_TYPE_NOTIFICATION]);
+		if (atom[_NET_WM_WINDOW_TYPE_NOTIFICATION] == *prop) return;
+	}
+	printf("window is not notification\n");
+	XSetInputFocus(display, window, RevertToParent, CurrentTime);
+	XChangeProperty(display, root.handle, atom[_NET_ACTIVE_WINDOW],
+		atom[WINDOW], 32, PropModeReplace, (void *)&window, 1);
+}
+
+void focus_active_window (void) {
+	XLowerWindow(display, pede);
+	Window active = active_window();
+	if (pede == active || 0 == active) return;
+	focus_window(active);
+}
+
+void maximize_window (Window window) {
+	union {
+		struct { long flags; XWindowAttributes attributes; } hax;
+		XSizeHints sizehints;
+	} hax = { .hax.flags = USPosition | USSize };
+	XGetWindowAttributes(display, window, &hax.hax.attributes);
+	XSetWMSizeHints(display, window, &hax.sizehints, atom[WM_NORMAL_HINTS]);
+	XMoveResizeWindow(display, window, 0, 0, root.width, root.height);
 }
 
 void restore_window (Window window) {
@@ -242,16 +181,6 @@ void remove_state (Window window, Atom state) {
 	XFree(states);
 }
 
-void maximize_window (Window window) {
-	union {
-		struct { long flags; XWindowAttributes attributes; } hax;
-		XSizeHints sizehints;
-	} hax = { .hax.flags = USPosition | USSize };
-	XGetWindowAttributes(display, window, &hax.hax.attributes);
-	XSetWMSizeHints(display, window, &hax.sizehints, atom[WM_NORMAL_HINTS]);
-	XMoveResizeWindow(display, window, 0, 0, root.width, root.height);
-}
-
 void add_state (Window window, Atom state) {
 	if (state == atom[_NET_WM_STATE_FULLSCREEN])
 		maximize_window(window);
@@ -293,6 +222,100 @@ void toggle_fullscreen (Bool alt_fullscreen) {
 				(root.height - ALT_FULLSCREEN_HEIGHT) / 2,
 				ALT_FULLSCREEN_WIDTH, ALT_FULLSCREEN_HEIGHT);
 	}
+}
+
+void hide_window (Window win) {
+	add_state(win, atom[_NET_WM_STATE_HIDDEN]);
+	XUnmapWindow(display, win);
+}
+
+void show_window (Window win) {
+	remove_state(win, atom[_NET_WM_STATE_HIDDEN]);
+	XMapWindow(display, win);
+}
+
+void activate_workspace (const uint32_t which) {
+	Window *windows = NULL;
+	unsigned count;
+
+	if ((uint32_t)-1 != which)
+		XChangeProperty(display, root.handle, atom[_NET_CURRENT_DESKTOP],
+			atom[CARDINAL], 32, PropModeReplace, (void *)&which, 1);
+
+	if (!XQueryTree(display, root.handle, VOID, VOID, &windows,
+		&count)) return;
+
+	for (int i = 0; i < count; i++) {
+		uint32_t *workspace = NULL;
+		XGetWindowProperty(display, windows[i], atom[_NET_WM_DESKTOP], 0, 1,
+			False, atom[CARDINAL], VOID, VOID, VOID, VOID, (void *)&workspace);
+		if (!workspace) continue;
+		if (which == *workspace
+			|| (uint32_t)-1 == *workspace
+			|| (uint32_t)-1 == which) show_window(windows[i]);
+		else hide_window(windows[i]);
+		XFree(workspace);
+	}
+
+	XFree(windows);
+
+	XRaiseWindow(display, active_window());
+	focus_active_window();
+}
+
+void set_workspace (Window window, uint32_t workspace) {
+	if (window == pede) return;
+	if (XWindowPropertyArrayContains(
+		window, atom[_NET_WM_STATE], atom[_NET_WM_STATE_STICKY]
+	)) workspace = -1;
+	XChangeProperty(display, window, atom[_NET_WM_DESKTOP], atom[CARDINAL],
+		32, PropModeReplace, (void *)&workspace, 1);
+	activate_workspace(active_workspace());
+}
+
+void *XGetWindowPropertyString (Window window, Atom property) {
+	void *data = NULL;
+
+	XGetWindowProperty(display, window, property, 0, 9999, False,
+		AnyPropertyType, VOID, VOID, VOID, VOID, (void *)&data);
+	return data;
+}
+
+int visible_windows (Window **ret) {
+	Window *windows = NULL;
+	unsigned window_count;
+
+	XQueryTree(display, root.handle, VOID, VOID, &windows, &window_count);
+	if (!windows) return window_count;
+
+	Window *visible = NULL;
+	unsigned visible_count = 0;
+	for (unsigned i = window_count; i--;) {
+		XWindowAttributes attrs;
+		XGetWindowAttributes(display, windows[i], &attrs);
+		if (IsViewable != attrs.map_state || XWindowPropertyArrayContains(
+			windows[i], atom[_NET_WM_WINDOW_TYPE],
+			atom[_NET_WM_WINDOW_TYPE_DESKTOP])) continue;
+		visible = realloc(visible, (1 + visible_count) * sizeof(*visible));
+		visible[visible_count++] = windows[i];
+	}
+	XFree(windows);
+	*ret = visible;
+	return visible_count;
+}
+
+void close_window (Window window) {
+	if (XWindowPropertyArrayContains(
+		window, atom[WM_PROTOCOLS], atom[WM_DELETE_WINDOW]
+	)) XSendEvent(
+		display, window, False, NoEventMask, (XEvent *)&(XClientMessageEvent){
+			.type = ClientMessage, .display = display,
+			.window = window, .message_type = atom[WM_PROTOCOLS],
+			.format = 32, .data.l = { atom[WM_DELETE_WINDOW] }
+		}
+	);
+	//else XKillClient(display, window);
+	else XDestroyWindow(display, window);
 }
 
 void alter_window_state (XClientMessageEvent event) {

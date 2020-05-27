@@ -372,9 +372,14 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 		case ButtonRelease:
 			XUngrabPointer(display, event.xbutton.time);
 			break;
+		case UnmapNotify:
+			if (!XWindowPropertyArrayContains(event.xunmap.window,
+				atom[_NET_WM_STATE], atom[_NET_WM_STATE_HIDDEN])
+			) XDeleteProperty(display, event.xunmap.window,
+				atom[_NET_WM_DESKTOP]);
+			break;
 		case MappingNotify: // display start menu?
 		case CreateNotify: // fall through
-		case UnmapNotify:
 		case ConfigureNotify:
 		case PropertyNotify:
 			break;
