@@ -94,6 +94,9 @@ void activate_workspace (const uint32_t which) {
 
 void set_workspace (Window window, uint32_t workspace) {
 	if (window == pede) return;
+	if (XWindowPropertyArrayContains(
+		window, atom[_NET_WM_STATE], atom[_NET_WM_STATE_STICKY]
+	)) workspace = -1;
 	XChangeProperty(display, window, atom[_NET_WM_DESKTOP], atom[CARDINAL],
 		32, PropModeReplace, (void *)&workspace, 1);
 	activate_workspace(active_workspace());
