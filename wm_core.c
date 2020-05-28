@@ -47,7 +47,7 @@ it will never intentionally do this, and will raise an error whenever the
 X server tries to do this, yet *somehow* this code still runs...
 */
 		printf("XLIB ERROR: Zero-bit property occupies %lu bytes.\n", *count);
-		puts("Assuming 32 bits...");
+		puts("Assuming 32 bits..."); fflush(stdout);
 		*bits = 32;
 	}
 	*count /= *bits / 8;
