@@ -62,7 +62,7 @@ Bool XWindowPropertyArrayContains (Window window, Atom haystack, Atom needle) {
 	int bits;
 	Atom *data = XGetWindowPropertyArray(window, haystack, atom[ATOM], &i,
 		&bits);
-	while (i--) if (needle == data[i]) {
+	while (data && i--) if (needle == data[i]) {
 		XFree(data);
 		return True;
 	}
