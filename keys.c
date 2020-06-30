@@ -117,8 +117,10 @@ void handle_key_events (XEvent event) {
 			XSync(display, False);
 		} else if (event.xkey.keycode == keycodes[KcL]) {
 			run(LOCKER, LOCKERARGS);
+#if defined(RUNNER) && defined(RUNNERARGS)
 		} else if (event.xkey.keycode == keycodes[KcR]) {
 			run(RUNNER, RUNNERARGS);
+#endif
 		} else if (event.xkey.keycode == keycodes[KcF4]) {
 			close_window(active_window());
 		} else if (event.xkey.keycode == keycodes[Kc1]) {
@@ -218,7 +220,9 @@ void hook_keys (void) {
 	lock_ignoring_hook(keycodes[KcTab], Mod1Mask);
 	lock_ignoring_hook(keycodes[KcF4], Mod1Mask);
 	lock_ignoring_hook(keycodes[KcL], Mod4Mask);
+#if defined(RUNNER) && defined(RUNNERARGS)
 	lock_ignoring_hook(keycodes[KcR], Mod4Mask);
+#endif
 	lock_ignoring_hook(keycodes[Kc1], Mod4Mask | ShiftMask);
 	lock_ignoring_hook(keycodes[Kc2], Mod4Mask | ShiftMask);
 	lock_ignoring_hook(keycodes[Kc3], Mod4Mask | ShiftMask);
