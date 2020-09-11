@@ -27,13 +27,13 @@
 
 // VOLUME_CONTROL should be the name of the program you want to use
 // to control your system volume. Good examples are pactl or amixer
-#define VOLUME_CONTROL "pactl"
+#define VOLUME_CONTROL "/home/pegasus/code/pede/pulse-volume"
 
 // RAISE_VOLUME, LOWER_VOLUME, and TOGGLE_MUTE should be the required
 // arguments to pass to VOLUME_CONTROL that do what they say.
-#define RAISE_VOLUME "set-sink-volume", "@DEFAULT_SINK@", "+5%"
-#define LOWER_VOLUME "set-sink-volume", "@DEFAULT_SINK@", "-5%"
-#define TOGGLE_MUTE "set-sink-mute", "@DEFAULT_SINK@", "toggle"
+#define RAISE_VOLUME "set-sink-volume", "+5%"
+#define LOWER_VOLUME "set-sink-volume", "-5%"
+#define TOGGLE_MUTE "set-sink-mute", "toggle"
 
 #define SCROT_ARGS \
 	"xclip -selection clipboard -t image/png -i $f;" \

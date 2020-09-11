@@ -1,0 +1,10 @@
+#!/bin/sh
+
+for i in $(
+	pacmd list-sinks | \
+	grep -e index: -e driver: | \
+	paste -d" " - - | \
+	awk '!/module-null-sink/{print $2}'
+); do
+	pactl $1 $i $2
+done
