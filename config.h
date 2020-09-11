@@ -27,7 +27,7 @@
 
 // VOLUME_CONTROL should be the name of the program you want to use
 // to control your system volume. Good examples are pactl or amixer
-#define VOLUME_CONTROL "/home/pegasus/code/pede/pulse-volume"
+#define VOLUME_CONTROL "/home/pegasus/.pede/pulse-volume"
 
 // RAISE_VOLUME, LOWER_VOLUME, and TOGGLE_MUTE should be the required
 // arguments to pass to VOLUME_CONTROL that do what they say.

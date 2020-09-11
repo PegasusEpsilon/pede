@@ -47,5 +47,6 @@ make a change I like, I'll merge it. But know that the roadmap is in flux.
 Anyway, that's it. Go play with the code.
 
 Places files go on my system:
+- pulse-volume in ~/.pede/
 - pede_badge-symbolic.svg in /usr/share/icons/hicolor/scalable/places/
 - pede.desktop in /usr/share/xsessions/
