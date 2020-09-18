@@ -17,7 +17,7 @@
 #include <string.h> 	// strlen()
 #include <signal.h> 	// SIGINT, SIGCHLD, SIGTERM, SIGUSR1
 #include <sys/select.h>	// fd_set, pipe(), FD_SET(), FD_ZERO(), select()
-#include <sys/wait.h>	// wait()
+#include <sys/wait.h>	// waitpid()
 #include <time.h>   	// nanosleep()
 
 #include "config.h"
