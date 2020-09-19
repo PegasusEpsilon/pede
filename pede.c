@@ -389,10 +389,14 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 	};
 }
 
-static void numlock_doesnt_matter (unsigned btn, unsigned mod) {
-	XGrabButton(display, btn,            mod, root.handle, True,
+static void lock_ignoring_button_hook (unsigned btn, unsigned mod) {
+	XGrabButton(display, btn,                       mod, root.handle, True,
 			ButtonPressMask, GrabModeSync, GrabModeSync, None, None);
-	XGrabButton(display, btn, Mod2Mask | mod, root.handle, True,
+	XGrabButton(display, btn, LockMask | Mod2Mask | mod, root.handle, True,
+			ButtonPressMask, GrabModeSync, GrabModeSync, None, None);
+	XGrabButton(display, btn,            Mod2Mask | mod, root.handle, True,
+			ButtonPressMask, GrabModeSync, GrabModeSync, None, None);
+	XGrabButton(display, btn, LockMask |            mod, root.handle, True,
 			ButtonPressMask, GrabModeSync, GrabModeSync, None, None);
 }
 
@@ -506,13 +510,13 @@ int main (int argc, char **argv, char **envp) {
 	hook_keys();
 
 	// Button9 (my thumb button) = move window
-	//numlock_doesnt_matter(Button9, None);
+	//lock_ignoring_button_hook(Button9, None);
 	// left click = raise window
-	numlock_doesnt_matter(Button1, None);
+	lock_ignoring_button_hook(Button1, None);
 	// super+left = move window
-	numlock_doesnt_matter(Button1, Mod4Mask);
+	lock_ignoring_button_hook(Button1, Mod4Mask);
 	// super+right = resize window
-	numlock_doesnt_matter(Button3, Mod4Mask);
+	lock_ignoring_button_hook(Button3, Mod4Mask);
 
 	activate_workspace(active_workspace());
 	XMapWindow(display, pede);
