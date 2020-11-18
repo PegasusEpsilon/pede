@@ -79,15 +79,15 @@ void *XGetWindowPropertyString (Window window, Atom property) {
 	return data;
 }
 
-const char *const title_missing = "<unknown>";
 char *window_title (Window window) {
+	const char *const unknown = "<unknown>";
 	char *title;
 	Atom atoms[3] = { atom[CLASS], atom[WM_NAME], atom[_NET_WM_NAME] };
 	for (int i = 3; i--;) {
 		title = XGetWindowPropertyString(window, atoms[i]);
 		if (title) return title;
 	}
-	return (char *)title_missing;
+	return (char *)unknown;
 }
 
 unsigned char active_workspace (void) {
