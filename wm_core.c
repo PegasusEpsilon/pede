@@ -158,8 +158,10 @@ void maximize_window (Window window) {
 	XkbGetState(display, XkbUseCoreKbd, &state);
 	printf("fullscreening, mods state: 0x%02x\n", state.mods);
 	if (state.mods & Mod1Mask)
-		XMoveResizeWindow(display, window,
-			(root.width - ALT_FULLSCREEN_WIDTH) / 2,
+		XMoveResizeWindow(display, window, !hax.hax.attributes.x ? 0 :
+			hax.hax.attributes.x + hax.hax.attributes.width == root.width ?
+				root.width - ALT_FULLSCREEN_WIDTH : (
+					root.width - ALT_FULLSCREEN_WIDTH) / 2,
 			(root.height - ALT_FULLSCREEN_HEIGHT) / 2,
 			ALT_FULLSCREEN_WIDTH, ALT_FULLSCREEN_HEIGHT);
 	else
