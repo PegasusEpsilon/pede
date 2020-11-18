@@ -5,6 +5,7 @@
 */
 
 #include <X11/Xutil.h>
+#include <X11/XKBlib.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -153,7 +154,16 @@ void maximize_window (Window window) {
 	} hax = { .hax.flags = USPosition | USSize };
 	XGetWindowAttributes(display, window, &hax.hax.attributes);
 	XSetWMSizeHints(display, window, &hax.sizehints, atom[WM_NORMAL_HINTS]);
-	XMoveResizeWindow(display, window, 0, 0, root.width, root.height);
+	XkbStateRec state;
+	XkbGetState(display, XkbUseCoreKbd, &state);
+	printf("fullscreening, mods state: 0x%02x\n", state.mods);
+	if (state.mods & Mod1Mask)
+		XMoveResizeWindow(display, window,
+			(root.width - ALT_FULLSCREEN_WIDTH) / 2,
+			(root.height - ALT_FULLSCREEN_HEIGHT) / 2,
+			ALT_FULLSCREEN_WIDTH, ALT_FULLSCREEN_HEIGHT);
+	else
+		XMoveResizeWindow(display, window, 0, 0, root.width, root.height);
 }
 
 void restore_window (Window window) {
@@ -231,19 +241,12 @@ void add_state (Window window, Atom state) {
 	XFree(states);
 }
 
-void toggle_fullscreen (Bool alt_fullscreen) {
+void toggle_fullscreen (void) {
 	Window w = active_window();
 	Atom f = atom[_NET_WM_STATE_FULLSCREEN];
 	if (XWindowPropertyArrayContains(w, atom[_NET_WM_STATE], f))
 		remove_state(w, f);
-	else {
-		add_state(w, f);
-		if (alt_fullscreen)
-			XMoveResizeWindow(display, w,
-				(root.width - ALT_FULLSCREEN_WIDTH) / 2,
-				(root.height - ALT_FULLSCREEN_HEIGHT) / 2,
-				ALT_FULLSCREEN_WIDTH, ALT_FULLSCREEN_HEIGHT);
-	}
+	else add_state(w, f);
 }
 
 void hide_window (Window win) {

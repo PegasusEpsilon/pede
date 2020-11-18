@@ -146,7 +146,7 @@ void handle_key_events (XEvent event) {
 		} else if (event.xkey.keycode == keycodes[KcXF86AudioMute]) {
 			run(VOLUME_CONTROL, TOGGLE_MUTE);
 		} else if (event.xkey.keycode == keycodes[KcUp])
-			toggle_fullscreen(event.xkey.state & Mod1Mask ? True : False);
+			toggle_fullscreen();
 		else puts("caught unhandled keystroke, your KEY_EXPANDO list "
 				"may be out of sync with keys.c");
 		break;
