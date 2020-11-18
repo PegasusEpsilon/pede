@@ -469,6 +469,7 @@ int main (int argc, char **argv, char **envp) {
 	XStoreName(display, pede, title);
 	XChangeProperty(display, pede, atom[_NET_SUPPORTING_WM_CHECK],
 		atom[WINDOW], 32, PropModeReplace, (void *)&pede, 1);
+	set_sticky(pede);
 
 	gc = XCreateGC(display, pede, 0, 0);
 	// we assume FILENAME lives in our directory

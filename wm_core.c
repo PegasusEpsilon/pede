@@ -252,6 +252,11 @@ void add_state (Window window, Atom state) {
 	XFree(states);
 }
 
+void set_sticky (Window window) {
+	add_state(window, atom[_NET_WM_STATE_STICKY]);
+	XDeleteProperty(display, window, atom[_NET_WM_DESKTOP]);
+}
+
 void toggle_fullscreen (void) {
 	Window w = active_window();
 	Atom f = atom[_NET_WM_STATE_FULLSCREEN];
@@ -281,14 +286,22 @@ void activate_workspace (const uint32_t which) {
 	if (!XQueryTree(display, root.handle, VOID, VOID, &windows,
 		&count)) return;
 
-	for (int i = 0; i < count; i++) {
+	/* all windows visible */
+	if ((uint32_t)-1 == which)
+		for (int i = 0; i < count; i++)
+			show_window(windows[i]);
+	else for (int i = 0; i < count; i++) {
+		if (XWindowPropertyArrayContains(windows[i], atom[_NET_WM_STATE],
+			atom[_NET_WM_STATE_STICKY])) {
+			show_window(windows[i]);
+			continue;
+		}
 		uint32_t *workspace = NULL;
 		XGetWindowProperty(display, windows[i], atom[_NET_WM_DESKTOP], 0, 1,
 			False, atom[CARDINAL], VOID, VOID, VOID, VOID, (void *)&workspace);
-		if (!workspace) continue;
-		if (which == *workspace
-			|| (uint32_t)-1 == *workspace
-			|| (uint32_t)-1 == which) show_window(windows[i]);
+		if (!workspace) continue; /* window is not managed by pede */
+		if (which == *workspace || (uint32_t)-1 == *workspace)
+			show_window(windows[i]);
 		else hide_window(windows[i]);
 		XFree(workspace);
 	}
@@ -301,9 +314,6 @@ void activate_workspace (const uint32_t which) {
 
 void set_workspace (Window window, uint32_t workspace) {
 	if (window == pede) return;
-	if (XWindowPropertyArrayContains(
-		window, atom[_NET_WM_STATE], atom[_NET_WM_STATE_STICKY]
-	)) workspace = -1;
 	XChangeProperty(display, window, atom[_NET_WM_DESKTOP], atom[CARDINAL],
 		32, PropModeReplace, (void *)&workspace, 1);
 	activate_workspace(active_workspace());
