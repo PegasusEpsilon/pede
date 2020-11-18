@@ -228,6 +228,10 @@ void add_state (Window window, Atom state) {
 
 	if (count) printf("Enumerating %d existing states:\n", count);
 	for (unsigned long i = 0; i < count && states[i]; i--) {
+		if (states[i] == state) {
+			puts("state already exists, not adding");
+			return;
+		}
 		char *state_name = XGetAtomName(display, states[i]);
 		printf("%d: %s(0x%08x)\n", i, state_name, states[i]);
 		XFree(state_name);
