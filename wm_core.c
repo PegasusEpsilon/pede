@@ -201,12 +201,19 @@ void remove_state (Window window, Atom state) {
 	}
 
 	unsigned long new_count = XDeleteAtomFromArray(states, count, state);
-	if (new_count != count) {
-		if (new_count) XChangeProperty(display, window, atom[_NET_WM_STATE],
-			atom[ATOM], bits, PropModeReplace, (void *)&states, new_count);
-		else XDeleteProperty(display, window, atom[_NET_WM_STATE]);
-	} else printf("Window 0x%08lx's _NET_WM_STATE contains no %s\n",
-		window, state_name);
+	if (new_count < count) {
+		if (new_count) {
+			printf("0x%08x(%s) has %d remaining states, updating state property\n",
+				window, window_title(window), new_count);
+			XChangeProperty(display, window, atom[_NET_WM_STATE],
+				atom[ATOM], bits, PropModeReplace, (void *)states, new_count);
+		} else {
+			printf("0x%08x(%s) has zero remaining states, removing state property\n",
+				window, window_title(window));
+			XDeleteProperty(display, window, atom[_NET_WM_STATE]);
+		}
+	} else printf("Window 0x%08lx(%s)'s _NET_WM_STATE contains no %s\n",
+		window, window_title(window), state_name);
 
 	XFree(state_name);
 	XFree(states);
