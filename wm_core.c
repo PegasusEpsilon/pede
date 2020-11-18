@@ -70,6 +70,25 @@ Bool XWindowPropertyArrayContains (Window window, Atom haystack, Atom needle) {
 	return False;
 }
 
+void *XGetWindowPropertyString (Window window, Atom property) {
+	void *data = NULL;
+
+	XGetWindowProperty(display, window, property, 0, 9999, False,
+		AnyPropertyType, VOID, VOID, VOID, VOID, (void *)&data);
+	return data;
+}
+
+const char *const title_missing = "<unknown>";
+char *window_title (Window window) {
+	char *title;
+	Atom atoms[3] = { atom[CLASS], atom[WM_NAME], atom[_NET_WM_NAME] };
+	for (int i = 3; i--;) {
+		title = XGetWindowPropertyString(window, atoms[i]);
+		if (title) return title;
+	}
+	return (char *)title_missing;
+}
+
 unsigned char active_workspace (void) {
 	uint32_t ret, *workspace = NULL;
 	XGetWindowProperty(display, root.handle, atom[_NET_CURRENT_DESKTOP], 0,
@@ -100,7 +119,7 @@ Window active_window (void) {
 }
 
 void focus_window (Window window) {
-	printf("Focusing window 0x%08x\n", window);
+	printf("Focusing window 0x%08x(%s)\n", window, window_title(window));
 	if (window == pede) return;
 	printf("window is not pede\n");
 	Atom *prop = NULL;
@@ -157,11 +176,13 @@ void remove_state (Window window, Atom state) {
 		window, atom[_NET_WM_STATE], atom[ATOM], &count, &bits
 	);
 	if (!count) {
-		printf("Can't remove %s from window 0x%08lx because it has no"
-			" _NET_WM_STATEs.\n", state_name, window);
+		printf("Can't remove %s(0x%08x from window 0x%08lx(%s) because it has"
+			" no _NET_WM_STATEs.\n", state_name, state, window,
+			window_title(window));
 		XFree(state_name);
 		return;
-	} else printf("Remove state %s from window 0x%08lx\n", state_name, window);
+	} else printf("Remove state %s(0x%08x) from window 0x%08lx(%s)\n",
+		state_name, state, window, window_title(window));
 
 	if (count) printf("Enumerating %d extant states\n", count);
 	for (unsigned long i = 0; i < count; i++) {
@@ -186,7 +207,8 @@ void add_state (Window window, Atom state) {
 		maximize_window(window);
 
 	char *state_name = XGetAtomName(display, state);
-	printf("Add state %s to window 0x%08lx\n", state_name, window);
+	printf("Add state %s(0x%08x) to window 0x%08lx(%s)\n", state_name, state,
+		window, window_title(window));
 	XFree(state_name);
 
 	unsigned long count;
@@ -197,7 +219,7 @@ void add_state (Window window, Atom state) {
 	if (count) printf("Enumerating %d existing states:\n", count);
 	for (unsigned long i = 0; i < count && states[i]; i--) {
 		char *state_name = XGetAtomName(display, states[i]);
-		printf("%d: %s\n", i, state_name);
+		printf("%d: %s(0x%08x)\n", i, state_name, states[i]);
 		XFree(state_name);
 	}
 
@@ -271,14 +293,6 @@ void set_workspace (Window window, uint32_t workspace) {
 	XChangeProperty(display, window, atom[_NET_WM_DESKTOP], atom[CARDINAL],
 		32, PropModeReplace, (void *)&workspace, 1);
 	activate_workspace(active_workspace());
-}
-
-void *XGetWindowPropertyString (Window window, Atom property) {
-	void *data = NULL;
-
-	XGetWindowProperty(display, window, property, 0, 9999, False,
-		AnyPropertyType, VOID, VOID, VOID, VOID, (void *)&data);
-	return data;
 }
 
 int visible_windows (Window **ret) {
