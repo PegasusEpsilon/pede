@@ -22,6 +22,12 @@ void focus_active_window (void);
 void activate_workspace (const uint32_t);
 void set_workspace (Window, uint32_t);
 char *window_title (Window);
+void set_sticky (Window);
+/* TODO:
+void clear_sticky (Window);
+void set_bottom (Window);
+void set_top (Window);
+*/
 void *XGetWindowPropertyArray (Window, Atom, Atom, unsigned long *);
 Bool XWindowPropertyArrayContains (Window, Atom, Atom);
 unsigned visible_windows(Window **windows);
