@@ -77,9 +77,21 @@ void handle_key_events (XEvent event) {
 			event.xkey.keycode == keycodes[KcRight] &&
 			event.xkey.state & Mod4Mask
 		) {
-			int workspace = (1 + active_workspace()) % 4;
-			if (event.xkey.state & ShiftMask)
+			int workspace = (active_workspace() + 1) % 4;
+			if (event.xkey.state & ShiftMask) {
 				set_workspace(active_window(), workspace);
+				XSync(display, True);
+			}
+			activate_workspace(workspace);
+		} else if (
+			event.xkey.keycode == keycodes[KcLeft] &&
+			event.xkey.state & Mod4Mask
+		) {
+			int workspace = (active_workspace() + 3) % 4;
+			if (event.xkey.state & ShiftMask) {
+				set_workspace(active_window(), workspace);
+				XSync(display, True);
+			}
 			activate_workspace(workspace);
 		} else if (event.xkey.keycode == keycodes[KcPrint]) {
 			event.xkey.state &= ~Mod2Mask; // ignore numlock bit
@@ -96,14 +108,6 @@ void handle_key_events (XEvent event) {
 					GrabModeAsync, GrabModeAsync, event.xkey.time);
 				XSync(display, False);
 			}
-		} else if (
-			event.xkey.keycode == keycodes[KcLeft] &&
-			event.xkey.state & Mod4Mask
-		) {
-			int workspace = (3 + active_workspace()) % 4;
-			if (event.xkey.state & ShiftMask)
-				set_workspace(active_window(), workspace);
-			activate_workspace(workspace);
 		} else if (event.xkey.keycode == keycodes[KcTab]) {
 			if (!window_list) {
 				window_list_length = visible_windows(&window_list);
