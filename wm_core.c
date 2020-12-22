@@ -255,12 +255,7 @@ Window *page_window_list;
 unsigned page_window_count;
 void page_windows_start (void) {
 	page_window_count = filter_windows(&page_window_list, &window_pageable);
-	puts("<page_windows_start>");
-	for (unsigned i = 0; i < page_window_count; i++) {
-		printf("%d: ", i);
-		window_diagnostic("", page_window_list[i], "\n");
-	}
-	puts("</page_windows_end>");
+	reverse_window_array(page_window_list, page_window_count);
 }
 
 void page_windows (int direction) {
@@ -277,10 +272,9 @@ void page_windows (int direction) {
 			page_window_list[i + 1] = page_window_list[i];
 		page_window_list[0] = tmp;
 	}
-	for (unsigned i = 0; i < page_window_count; i++) {
-		XRaiseWindow(display, page_window_list[i]);
-		focus_window(page_window_list[i]);
-	}
+	XRaiseWindow(display, page_window_list[0]);
+	focus_window(page_window_list[0]);
+	XRestackWindows(display, page_window_list, (int)page_window_count);
 }
 
 void page_windows_end (void) {

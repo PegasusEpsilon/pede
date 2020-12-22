@@ -12,6 +12,10 @@
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
+void reverse_long_array (long unsigned *, long unsigned);
+#define reverse_window_array(x, y) reverse_long_array((long unsigned *)x, y);
+#define reverse_atom_array(x, y) reverse_long_array((long unsigned *)x, y);
+
 Bool long_array_contains (long unsigned, long unsigned *, register size_t);
 #define window_array_contains(x, y, z) \
 	long_array_contains((long unsigned)x, (long unsigned *)y, z)

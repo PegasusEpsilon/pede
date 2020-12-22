@@ -2,6 +2,14 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+void reverse_long_array (long unsigned *array, long unsigned count) {
+	for (long unsigned i = count-- / 2; i--;) {
+		array[i] ^= array[count - i];
+		array[count - i] ^= array[i];
+		array[i] ^= array[count - i];
+	}
+}
+
 bool long_array_contains (
 	long unsigned needle, long unsigned *haystack, long unsigned count
 ) {
