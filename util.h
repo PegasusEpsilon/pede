@@ -10,19 +10,11 @@
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
-unsigned long delete_int64_t_from_array (int64_t *, unsigned long, int64_t);
+size_t XDeleteLongFromArray (long unsigned *, register size_t, Bool (*)(long unsigned));
 
-#include "data_sizes.h"
-#if 8 == ATOM_SIZE
-#define XDeleteAtomFromArray(a, l, e) delete_int64_t_from_array((int64_t *)(a), l, (int64_t)(e))
-#else
-#error 8 != ATOM_SIZE - Send me data_sizes.h in a bug report.
-#endif
-#if 8 == WINDOW_SIZE
-#define XDeleteWindowFromArray(a, l, e) \
-	delete_int64_t_from_array((int64_t *)(a), l, (int64_t)(e))
-#else
-#error 8 != WINDOW_SIZE - Send me data_sizes.h in a bug report.
-#endif
+#define XDeleteWindowFromArray(x, y, z) \
+	XDeleteLongFromArray((long unsigned *)x, y, z);
+#define XDeleteAtomFromArray(x, y, z) \
+	XDeleteLongFromArray((long unsigned *)x, y, z);
 
 #endif // UTIL_H

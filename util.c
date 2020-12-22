@@ -1,13 +1,14 @@
 #include <stdint.h>
 #include <stdio.h>
+#include <X11/Xlib.h>
 
-unsigned long delete_int64_t_from_array (
-	int64_t *array, unsigned long register length, int64_t element
+size_t XDeleteLongFromArray (
+	long unsigned *array, const size_t length, Bool (*delete)(long unsigned)
 ) {
-	unsigned long register src = 0, dst = 0;
-	while (src < length) {
-		while (array[src] == element)
-			if (++src >= length) return dst;
+	size_t src = 0, dst = 0;
+	while (length > src) {
+		while (delete(array[src]) && length > ++src);
+		if (length <= src) break;
 		if (src != dst) array[dst] = array[src];
 		src++; dst++;
 	}
