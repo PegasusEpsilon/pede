@@ -24,18 +24,19 @@ pushd $HOME
 # start some daemons
 /usr/bin/xcompmgr &
 /usr/bin/xscreensaver &
-/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1 &
+POLKIT="/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1"
+test -x "$POLKIT" && "$POLKIT" &
 /usr/bin/start-pulseaudio-x11 &
 /usr/bin/ibus-daemon --xim &
 /usr/bin/numlockx &
 /usr/bin/xbanish &
 
 # start pede
-rm $PEDE_DIRECTORY/stopping
-touch $PEDE_DIRECTORY/starting
 $PEDE_DIRECTORY/pede 2>&1 > $PEDE_DIRECTORY/pede.log
-rm $PEDE_DIRECTORY/starting
-touch $PEDE_DIRECTORY/stopping
+rm $PEDE_DIRECTORY/stopping$DISPLAY
+touch $PEDE_DIRECTORY/starting$DISPLAY
+rm $PEDE_DIRECTORY/starting$DISPLAY
+touch $PEDE_DIRECTORY/stopping$DISPLAY
 
 # put you back where you started, just in case
 popd
