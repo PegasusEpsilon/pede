@@ -9,7 +9,6 @@
 #include <X11/Xlib.h>
 #include <unistd.h>
 #include <stdint.h>
-#include <stdlib.h>
 #include <stdio.h>
 
 #include "types.h"
