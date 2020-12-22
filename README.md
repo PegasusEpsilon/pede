@@ -9,7 +9,6 @@ mousetrap. I think I'm doing a pretty decent job, honestly.
 
 - It does not reparent
 - It does not composite
-- ~~It does not handle window maximization states (yet, it's on my TODO)~~ It does now!
 - It does not read any configuration files other than the power button image data
 - It does not draw any UI widgets other than its power button
   - No, not even a confirmation dialog when you click the button. Be careful.
@@ -25,12 +24,15 @@ This DE is not for the faint of heart. It is for the extreme minimalist.
 - It positions windows. It positions windows ***well***.
 - It closes windows politely if they ask for politeness, rudely if they do not
 - It has workspaces
-- It lets you switch between workspaces (Super+[1234], Super+(left|right) arrow)
-- It lets you move windows between workspaces (Super+Shift+[1234], Super+Shift+(left|right) arrow)
+- It lets you switch between workspaces
+  - default: super+[1234], super+(left|right) arrow
+- It lets you move windows between workspaces
+  - default: super+shift+[1234], super+shift(left|right) arrow
 - It lets you move and resize windows with the mouse
-  - Super+left-click = move
-  - Super+right-click = resize
-- It lets you alt+tab (barely, I know, it's on my TODO)
+  - default: Super+left-click = move
+  - default: Super+right-click = resize
+- It lets you restack windows
+  - default: alt+tab
 - It snaps windows to the edge of the screen
 - It snaps windows to each other (kind of, might leave it this way, I kinda like it?)
 - It draws a compositor-friendly power button in a configurable location
