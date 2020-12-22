@@ -234,45 +234,6 @@ Bool should_focus (Window window) {
 	return True;
 }
 
-Window *page_window_list;
-unsigned page_window_count;
-void page_windows_start (void) {
-	page_window_count = filter_windows(&page_window_list, &window_pageable);
-	puts("<page_windows_start>");
-	for (unsigned i = 0; i < page_window_count; i++) {
-		printf("%d: ", i);
-		window_diagnostic("", page_window_list[i], "\n");
-	}
-	puts("</page_windows_end>");
-}
-void page_windows (int direction) {
-	if (!page_window_list) page_windows_start();
-	Window tmp;
-	if (RaiseLowest == direction) {
-		tmp = page_window_list[0];
-		for (unsigned i = 0; ++i < page_window_count;)
-			page_window_list[i - 1] = page_window_list[i];
-		page_window_list[page_window_count - 1] = tmp;
-	} else {
-		tmp = page_window_list[page_window_count - 1];
-		for (unsigned i = page_window_count - 1; i--;)
-			page_window_list[i + 1] = page_window_list[i];
-		page_window_list[0] = tmp;
-	}
-	puts("<page_windows>");
-	for (unsigned i = 0; i < page_window_count; i++) {
-		printf("%d: ", i);
-		XRaiseWindow(display, page_window_list[i]);
-		window_diagnostic("", page_window_list[i], "\n");
-	}
-	puts("</page_windows>");
-}
-void page_windows_end (void) {
-	XFree(page_window_list);
-	page_window_list = NULL;
-	page_window_count = 0;
-}
-
 void focus_window (Window window) {
 	if (!should_focus(window)) return;
 
@@ -288,6 +249,44 @@ void focus_active_window (void) {
 	XLowerWindow(display, pede);
 	Window active = active_window();
 	if (active) focus_window(active);
+}
+
+Window *page_window_list;
+unsigned page_window_count;
+void page_windows_start (void) {
+	page_window_count = filter_windows(&page_window_list, &window_pageable);
+	puts("<page_windows_start>");
+	for (unsigned i = 0; i < page_window_count; i++) {
+		printf("%d: ", i);
+		window_diagnostic("", page_window_list[i], "\n");
+	}
+	puts("</page_windows_end>");
+}
+
+void page_windows (int direction) {
+	if (!page_window_list) page_windows_start();
+	Window tmp;
+	if (RaiseLowest == direction) {
+		tmp = page_window_list[0];
+		for (unsigned i = 0; ++i < page_window_count;)
+			page_window_list[i - 1] = page_window_list[i];
+		page_window_list[page_window_count - 1] = tmp;
+	} else {
+		tmp = page_window_list[page_window_count - 1];
+		for (unsigned i = page_window_count - 1; i--;)
+			page_window_list[i + 1] = page_window_list[i];
+		page_window_list[0] = tmp;
+	}
+	for (unsigned i = 0; i < page_window_count; i++) {
+		XRaiseWindow(display, page_window_list[i]);
+		focus_window(page_window_list[i]);
+	}
+}
+
+void page_windows_end (void) {
+	XFree(page_window_list);
+	page_window_list = NULL;
+	page_window_count = 0;
 }
 
 // _NET_WM_STATE management
