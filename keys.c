@@ -26,47 +26,6 @@ static char *keycode_names[] = {
 #include "expandos.h"
 };
 
-static Window *window_list = NULL;
-static unsigned focusing = 0, window_list_length = 0;
-static void page_end (void) {
-	// free window_list allocated during page start
-	XFree(window_list);
-	XSync(display, False);
-	focus_active_window();
-	focusing = window_list_length = 0;
-	window_list = NULL;
-}
-static void page_previous (void) {
-	if (1 >= window_list_length) return;
-	if (!focusing) {
-		XRaiseWindow(display, window_list[window_list_length - 1]);
-		page_end();
-	} else {
-		window_list[0] ^= window_list[focusing];
-		window_list[focusing] ^= window_list[0];
-		window_list[0] ^= window_list[focusing];
-		XRestackWindows(display, window_list, (int)window_list_length);
-		focusing--;
-	}
-	focus_active_window();
-}
-static void page_next (void) {
-	// this one works right, though...
-	if (1 >= window_list_length) return;
-	focusing++;
-	if (focusing == window_list_length) {
-		XLowerWindow(display, window_list[0]);
-		XLowerWindow(display, pede);
-		page_end();
-	} else {
-		window_list[0] ^= window_list[focusing];
-		window_list[focusing] ^= window_list[0];
-		window_list[0] ^= window_list[focusing];
-		XRestackWindows(display, window_list, (int)window_list_length);
-	}
-	focus_active_window();
-}
-
 // macro magic because making an inline function
 // and using varargs is just far too painful.
 #define run(x, ...)                      \
@@ -115,15 +74,13 @@ void handle_key_events (XEvent event) {
 					GrabModeAsync, GrabModeAsync, event.xkey.time);
 				XSync(display, False);
 			}
+		} else if (
+			event.xkey.keycode == keycodes[KcShift_L] ||
+			event.xkey.keycode == keycodes[KcShift_R]
+		) { // ignored
 		} else if (event.xkey.keycode == keycodes[KcTab]) {
-			if (!window_list) {
-				// visible windows allocation will be freed in page_end()
-				window_list_length = (unsigned)visible_windows(&window_list);
-				if (event.xkey.state & ShiftMask)
-					focusing = window_list_length - 1;
-			}
-			if (event.xkey.state & ShiftMask) page_previous();
-			else page_next();
+			// ShiftMask == LowerHighest
+			page_windows(event.xkey.state & ShiftMask);
 			XGrabKeyboard(display, root.handle, False,
 				GrabModeAsync, GrabModeAsync, event.xkey.time);
 			XSync(display, False);
@@ -187,7 +144,7 @@ void handle_key_events (XEvent event) {
 			event.xkey.keycode == keycodes[KcAlt_L] ||
 			event.xkey.keycode == keycodes[KcAlt_R]
 		) {
-			page_end();
+			page_windows_end();
 			XUngrabKeyboard(display, event.xkey.time);
 			// finalize window restack
 		}

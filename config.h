@@ -10,6 +10,9 @@
 // comma-separated list of window move/resize modifiers.
 // they pretty much do what they say on the tin.
 // remove whichever modifiers you don't like to disable only that one.
+// order also matters, the last one will have precedence, but former ones may
+// alter window position/size, interfering with the intended operation of later
+// ones.
 //
 // valid MOVE_MODIFIERS:
 //   keep_on_screen - keeps all parts of all windows on the visible screen

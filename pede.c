@@ -157,9 +157,6 @@ void event_loop (void) {
 	while (!XWaitEvent()) {
 		if (!XPending(display)) return;
 		XNextEvent(display, &event);
-		//printf("event %s next request %d\n", event_names[event.type],
-		//	XNextRequest(display));
-		//fflush(stdout);
 		if (KeyPress == event.type || KeyRelease == event.type)
 			handle_key_events(event);
 		else switch (event.type) {
@@ -174,7 +171,7 @@ void event_loop (void) {
 				// FIXME: do not raise if keypress within last N second(s)?
 				XRaiseWindow(event.xmaprequest.display,
 					event.xmaprequest.window);
-				focus_active_window();
+				focus_window(event.xmaprequest.window);
 			}
 			break;
 		case ConfigureRequest:
@@ -372,10 +369,9 @@ void event_loop (void) {
 			XUngrabPointer(display, event.xbutton.time);
 			break;
 		case UnmapNotify:
-			if (!XWindowPropertyArrayContains(event.xunmap.window,
-				atom[_NET_WM_STATE], atom[_NET_WM_STATE_HIDDEN])
-			) XDeleteProperty(display, event.xunmap.window,
-				atom[_NET_WM_DESKTOP]);
+			if (active_workspace() == window_workspace(event.xunmap.window))
+				XDeleteProperty(display, event.xunmap.window,
+					atom[_NET_WM_DESKTOP]);
 			break;
 		case MappingNotify: // display start menu?
 		case CreateNotify: // fall through

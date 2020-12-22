@@ -79,7 +79,7 @@ void snap_to_center (Window ignored, char side, BOX *t) {
 
 static void snap_to_siblings (Window sizing, char side, BOX *t) {
 	Window *windows = NULL;
-	unsigned count = visible_windows(&windows);
+	unsigned count = filter_windows(&windows, &window_visible);
 
 	// process sibling windows into pairs of points
 	POINT *siblings = NULL;

@@ -71,7 +71,7 @@ static void snap_to_siblings (Window moving, BOX *t) {
 		XWindowAttributes attrs;
 		XGetWindowAttributes(display, windows[i], &attrs);
 		if (IsViewable != attrs.map_state) continue;
-		if (XWindowPropertyArrayContains(windows[i], atom[_NET_WM_WINDOW_TYPE],
+		if (window_property_array_contains(windows[i], atom[_NET_WM_WINDOW_TYPE],
 			atom[_NET_WM_WINDOW_TYPE_DESKTOP])) continue;
 		siblings = realloc(siblings, (2 + sibling_count) * sizeof(*siblings));
 		XGetGeometry(display, windows[i], VOID,

@@ -7,6 +7,9 @@
 #ifndef TYPES_H
 #define TYPES_H
 
+#include <X11/Xlib.h>
+
+typedef Bool Unless (long unsigned);
 typedef long Workspace;
 typedef struct { int x, y; } POINT;
 typedef struct { unsigned w, h; } SIZE;
