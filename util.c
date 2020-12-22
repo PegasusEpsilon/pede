@@ -1,9 +1,9 @@
 #include <stdint.h>
 #include <stdio.h>
-#include <X11/Xlib.h>
+#include <stdbool.h>
 
 size_t XDeleteLongFromArray (
-	long unsigned *array, const size_t length, Bool (*delete)(long unsigned)
+	long unsigned *array, const size_t length, bool (*delete)(long unsigned)
 ) {
 	size_t src = 0, dst = 0;
 	while (length > src) {
