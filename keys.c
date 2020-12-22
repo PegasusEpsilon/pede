@@ -9,10 +9,12 @@
 #include <X11/Xlib.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <stdio.h>
 
-#include "wm_core.h"
+#include "types.h"
 #include "config.h"
+#include "wm_core.h"
 
 typedef enum {
 #define KEY_EXPANDO(x) Kc ## x,
@@ -28,7 +30,10 @@ static char *keycode_names[] = {
 static Window *window_list = NULL;
 static unsigned focusing = 0, window_list_length = 0;
 static void page_end (void) {
+	// free window_list allocated during page start
 	XFree(window_list);
+	XSync(display, False);
+	focus_active_window();
 	focusing = window_list_length = 0;
 	window_list = NULL;
 }
@@ -41,7 +46,7 @@ static void page_previous (void) {
 		window_list[0] ^= window_list[focusing];
 		window_list[focusing] ^= window_list[0];
 		window_list[0] ^= window_list[focusing];
-		XRestackWindows(display, window_list, window_list_length);
+		XRestackWindows(display, window_list, (int)window_list_length);
 		focusing--;
 	}
 	focus_active_window();
@@ -58,17 +63,20 @@ static void page_next (void) {
 		window_list[0] ^= window_list[focusing];
 		window_list[focusing] ^= window_list[0];
 		window_list[0] ^= window_list[focusing];
-		XRestackWindows(display, window_list, window_list_length);
+		XRestackWindows(display, window_list, (int)window_list_length);
 	}
 	focus_active_window();
 }
 
-// this macro will break if used in any manner other than just
-// calling it as run("prog", "arg1", "arg2", ...);
-// I can't really think of a way around it, but it shouldn't matter?
-#define run(x, ...) if (!vfork()) execlp(x, x, __VA_ARGS__, NULL); \
+// macro magic because making an inline function
+// and using varargs is just far too painful.
+#define run(x, ...)                      \
+if (!vfork()) {                          \
+        setsid();                        \
+        execlp(x, x, __VA_ARGS__, NULL); \
+}
 
-static int prtscrn_state = None;
+static unsigned int prtscrn_state = None;
 void handle_key_events (XEvent event) {
 	switch(event.type) {
 	case KeyPress:
@@ -77,7 +85,7 @@ void handle_key_events (XEvent event) {
 			event.xkey.keycode == keycodes[KcRight] &&
 			event.xkey.state & Mod4Mask
 		) {
-			int workspace = (active_workspace() + 1) % 4;
+			Workspace workspace = (active_workspace() + 1) % 4;
 			if (event.xkey.state & ShiftMask) {
 				set_workspace(active_window(), workspace);
 				XSync(display, True);
@@ -87,14 +95,14 @@ void handle_key_events (XEvent event) {
 			event.xkey.keycode == keycodes[KcLeft] &&
 			event.xkey.state & Mod4Mask
 		) {
-			int workspace = (active_workspace() + 3) % 4;
+			Workspace workspace = (active_workspace() + 3) % 4;
 			if (event.xkey.state & ShiftMask) {
 				set_workspace(active_window(), workspace);
 				XSync(display, True);
 			}
 			activate_workspace(workspace);
 		} else if (event.xkey.keycode == keycodes[KcPrint]) {
-			event.xkey.state &= ~Mod2Mask; // ignore numlock bit
+			event.xkey.state &= ~(unsigned int)Mod2Mask; // ignore numlock bit
 			if (event.xkey.state == None) {
 				run(PRTSCRN, PRTSCRN_ARGS);
 			} else if (event.xkey.state == ControlMask) {
@@ -110,7 +118,8 @@ void handle_key_events (XEvent event) {
 			}
 		} else if (event.xkey.keycode == keycodes[KcTab]) {
 			if (!window_list) {
-				window_list_length = visible_windows(&window_list);
+				// visible windows allocation will be freed in page_end()
+				window_list_length = (unsigned)visible_windows(&window_list);
 				if (event.xkey.state & ShiftMask)
 					focusing = window_list_length - 1;
 			}

@@ -9,7 +9,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
+#include "types.h"
 #include "atoms.h"
 #include "config.h"
 #include "util.h"
@@ -20,8 +22,48 @@ Display *display;
 struct { Window handle; unsigned width, height; } root;
 Window pede;
 
+void *XGetWindowPropertyString (Window window, Atom property) {
+	void *data = NULL;
+
+	XGetWindowProperty(display, window, property, 0, 9999, False,
+		AnyPropertyType, VOID, VOID, VOID, VOID, (void *)&data);
+	return data;
+}
+
+char *window_title (Window window) {
+	const char *const unknown = "<unknown>";
+	char *title;
+	Atom atoms[3] = { atom[CLASS], atom[WM_NAME], atom[_NET_WM_NAME] };
+	for (int i = 3; i--;) {
+		title = XGetWindowPropertyString(window, atoms[i]);
+		if (title) return title;
+	}
+	char *tmp = malloc(strlen(unknown) + 1);
+	strcpy(tmp, unknown);
+	return tmp;
+}
+
+void window_diagnostic (
+	const char *const before, Window window, const char *const after
+) {
+	char *title = window_title(window);
+	printf("%s0x%08x(%s)%s", before, window, title, after);
+	fflush(stdout);
+	XFree(title);
+}
+
+void atom_diagnostic (
+	const char *const before, Atom _atom, const char *const after
+) {
+	char *atom_name = XGetAtomName(display, _atom);
+	printf("%s%s(0x%08x)%s", before,
+		atom_name ? atom_name : "<invalid>", _atom, after);
+	fflush(stdout);
+	XFree(atom_name);
+}
+
 void *XGetWindowPropertyArray (
-	Window window, Atom property, Atom type, unsigned long *count, int *bits
+	Window window, Atom property, Atom type, long unsigned *count, int *bits
 ) {
 	Atom _type;
 	void *data = NULL;
@@ -47,51 +89,53 @@ The source for libX11.so::GetProp.c::XGetWindowProperty seems to confirm that
 it will never intentionally do this, and will raise an error whenever the
 X server tries to do this, yet *somehow* this code still runs...
 */
-		printf("XLIB ERROR: Zero-bit property occupies %lu bytes.\n", *count);
-		puts("Assuming 32 bits..."); fflush(stdout);
+		printf("XLIB ERROR: Zero-bit property occupies %lu bytes. Assuming 32 bits.\n", *count);
 		*bits = 32;
 	}
-	*count /= *bits / 8;
-	XGetWindowProperty(display, window, property, 0, *count, False, type,
+	*count /= (long unsigned)*bits / 8;
+	XGetWindowProperty(display, window, property, 0, (long)*count, False, type,
 		VOID, VOID, VOID, VOID, (void *)&data);
+
+/*
+	if (*count) {
+		printf("Enumerating %d extant states on", *count);
+		window_diagnostic(" window ", window, ":\n");
+	}
+	for (long unsigned i = 0; i < *count; i--) {
+		printf("state %d:", i);
+		atom_diagnostic(" ", ((Atom *)data)[i], " or ");
+		window_diagnostic("window ", ((Window *)data)[i], "\n");
+	}
+*/
 
 	return data;
 }
 
-Bool XWindowPropertyArrayContains (Window window, Atom haystack, Atom needle) {
-	unsigned long i;
-	int bits;
-	Atom *data = XGetWindowPropertyArray(window, haystack, atom[ATOM], &i,
-		&bits);
-	while (data && i--) if (needle == data[i]) {
-		XFree(data);
-		return True;
-	}
-	XFree(data);
+Bool state_exists_internal (Atom needle, Atom *haystack, long unsigned count) {
+	while (haystack && count--)
+		if (needle == haystack[count])
+			return True;
 	return False;
 }
 
-void *XGetWindowPropertyString (Window window, Atom property) {
-	void *data = NULL;
+Bool XWindowPropertyArrayContains (Window window, Atom haystack, Atom needle) {
+	long unsigned count;
+	int bits;
+	Atom *data = XGetWindowPropertyArray(window, haystack, atom[ATOM], &count,
+		&bits);
 
-	XGetWindowProperty(display, window, property, 0, 9999, False,
-		AnyPropertyType, VOID, VOID, VOID, VOID, (void *)&data);
-	return data;
-}
-
-char *window_title (Window window) {
-	const char *const unknown = "<unknown>";
-	char *title;
-	Atom atoms[3] = { atom[CLASS], atom[WM_NAME], atom[_NET_WM_NAME] };
-	for (int i = 3; i--;) {
-		title = XGetWindowPropertyString(window, atoms[i]);
-		if (title) return title;
+	if (!bits) {
+		XFree(data);
+		return False;
 	}
-	return (char *)unknown;
+
+	Bool ret = state_exists_internal(needle, data, count);
+	XFree(data);
+	return ret;
 }
 
-unsigned char active_workspace (void) {
-	uint32_t ret, *workspace = NULL;
+Workspace active_workspace (void) {
+	Workspace ret, *workspace = NULL;
 	XGetWindowProperty(display, root.handle, atom[_NET_CURRENT_DESKTOP], 0,
 		1, False, atom[CARDINAL], VOID, VOID, VOID, VOID, (void *)&workspace);
 	ret = workspace ? *workspace : 0;
@@ -99,52 +143,187 @@ unsigned char active_workspace (void) {
 	return ret;
 }
 
+Bool window_visible (Window window) {
+	XWindowAttributes attrs;
+	XGetWindowAttributes(display, window, &attrs);
+	return IsViewable == attrs.map_state;
+}
+
+unsigned visible_windows (Window **list) {
+	unsigned count, src = 0, dst = 0;
+
+	if (!XQueryTree(display, root.handle, VOID, VOID, list, &count)) return 0;
+	while (count > src) {
+		while (!window_visible((*list)[src]) && count > ++src);
+		if (count <= src) break;
+		if (src != dst) (*list)[dst] = (*list)[src];
+		src++; dst++;
+	}
+
+	return dst;
+}
+
+Workspace get_workspace (Window window) {
+	Workspace ret, *tmp;
+	XGetWindowProperty(display, window, atom[_NET_WM_DESKTOP], 0, 1,
+		False, atom[CARDINAL], VOID, VOID, VOID, VOID, (void *)&tmp);
+	ret = tmp ? *tmp : -1;
+	XFree(tmp);
+	return ret;
+}
+
+Bool window_managed (Window window) {
+	return 0 <= get_workspace(window);
+/*
+	return window_visible(window) || XWindowPropertyArrayContains(
+		window, atom[_NET_WM_STATE], atom[_NET_WM_STATE_HIDDEN]);
+*/
+}
+
+unsigned managed_windows (Window **list) {
+	unsigned count, src = 0, dst = 0;
+	if (!XQueryTree(display, root.handle, VOID, VOID, list, &count)) return 0;
+	while (count > src) {
+		while (!window_managed((*list)[src]) && count > ++src);
+		if (count <= src) break;
+		if (src != dst) (*list)[dst] = (*list)[src];
+		src++; dst++;
+	}
+	return dst;
+}
+
+void update_client_list (void) {
+	Window *list = NULL;
+	int count = (int)managed_windows(&list);
+	XChangeProperty(display, root.handle, atom[_NET_CLIENT_LIST], atom[WINDOW],
+		32, PropModeReplace, (void *)list, count);
+	XFree(list);
+}
+
 Window active_window (void) {
 	Window *list;
 	Window active = None;
-	unsigned count = 0;
-	XWindowAttributes attrs;
+	unsigned count;
 
-	XQueryTree(display, root.handle, VOID, VOID, &list, &count);
-	for (int i = count; i && list[--i];) {
-		XGetWindowAttributes(display, list[i], &attrs);
+	if (!XQueryTree(display, root.handle, VOID, VOID, &list, &count)) return 0;
+	while (count && list[--count]) {
 		// Setting focus on withdrawn/iconified windows is an error.
 		// Always consider them inactive.
-		if (IsViewable == attrs.map_state) {
-			active = list[i];
+		if (list[count] != pede && window_visible(list[count])) {
+			active = list[count];
 			break;
 		}
 	}
 	XFree(list);
+
 	return active;
 }
 
 void focus_window (Window window) {
-	printf("Focusing window 0x%08x(%s)\n", window, window_title(window));
 	if (window == pede) return;
-	printf("window is not pede\n");
-	Atom *prop = NULL;
-	XGetWindowProperty(display, window, atom[_NET_WM_WINDOW_TYPE], 0, 32, False,
-		atom[ATOM], VOID, VOID, VOID, VOID, (void *)&prop);
-	if (prop) {
-		printf("prop address: 0x%08x\n", prop);
-		fflush(stdout);
-		printf("_NET_WM_WINDOW_TYPE: %d\n", *prop);
-		fflush(stdout);
-		printf("Looking for: %d\n", atom[_NET_WM_WINDOW_TYPE_NOTIFICATION]);
-		if (atom[_NET_WM_WINDOW_TYPE_NOTIFICATION] == *prop) return;
-	}
-	printf("window is not notification\n");
-	XSetInputFocus(display, window, RevertToParent, CurrentTime);
+
+	window_diagnostic("Focusing window ", window, "\n");
+
 	XChangeProperty(display, root.handle, atom[_NET_ACTIVE_WINDOW],
 		atom[WINDOW], 32, PropModeReplace, (void *)&window, 1);
+	XSetInputFocus(display, window, RevertToParent, CurrentTime);
+	update_client_list();
 }
 
 void focus_active_window (void) {
 	XLowerWindow(display, pede);
 	Window active = active_window();
-	if (pede == active || 0 == active) return;
-	focus_window(active);
+	if (active && pede != active && !XWindowPropertyArrayContains(active,
+		atom[_NET_WM_STATE], atom[_NET_WM_STATE_ABOVE])) focus_window(active);
+}
+
+// add_state_internal called by add_state_raw and toggle_state
+// toggle_state by definition checks that the state does not already exist
+// therefore checking that the state does not exist here is a waste of time
+// therefore add_state_raw must also check that the state does not already
+// exist before calling add_state_internal
+void add_state_internal (
+	Window window, Atom state, Atom *states, long unsigned count
+) {
+	//if (!states) return;
+
+	size_t size = (++count) * sizeof(state);
+	states = realloc(states, size);
+	states[count - 1] = state;
+
+	XChangeProperty(display, window, atom[_NET_WM_STATE], atom[ATOM],
+		32, PropModeReplace, (void *)states, (int)count);
+}
+
+Atom target_state;
+Bool state_matcher (Atom state) { return target_state == state; }
+void remove_state_internal (
+	Window window, Atom state, Atom *states, long unsigned count
+) {
+	if (!states) return;
+
+	while (count--) {
+		if (state == states[count]) {
+			target_state = state;
+			long unsigned new_count = XDeleteAtomFromArray(states, count, &state_matcher);
+
+			if (new_count) {
+				if (new_count < count) {
+					window_diagnostic("Window ", window, " ");
+					printf("has %d remaining states, updating state property\n", new_count);
+					XChangeProperty(display, window, atom[_NET_WM_STATE],
+						atom[ATOM], 32, PropModeReplace, (void *)states, (int)new_count);
+				} else {
+					window_diagnostic("Window ", window, "'s _NET_WM_STATE contains no");
+					atom_diagnostic(" ", state, "\n");
+				}
+			} else {
+				window_diagnostic("Window ", window,
+					" has zero remaining states, removing state property\n");
+				XDeleteProperty(display, window, atom[_NET_WM_STATE]);
+			}
+
+			return;
+		}
+	}
+
+}
+
+// add the state to the given window without any special behavior.
+void add_state_raw (Window window, Atom state) {
+	long unsigned count;
+
+	// format argument always seems to return zero, even though the docs
+	// insist it won't. whatever, just ignore it.
+	Atom *states = (Atom *)XGetWindowPropertyArray(window, atom[_NET_WM_STATE],
+		atom[ATOM], &count, VOID);
+
+	if (!state_exists_internal(state, states, count))
+		add_state_internal(window, state, states, count);
+
+	XFree(states);
+}
+
+void remove_state_raw (Window window, Atom state) {
+	int bits;
+	long unsigned count;
+
+	Atom *states = XGetWindowPropertyArray(window, atom[_NET_WM_STATE],
+		atom[ATOM], &count, &bits);
+
+	if (bits) remove_state_internal(window, state, states, count);
+
+	XFree(states);
+}
+
+void hide_window (Window win) {
+	add_state_raw(win, atom[_NET_WM_STATE_HIDDEN]);
+	XUnmapWindow(display, win);
+}
+
+void show_window (Window win) {
+	remove_state_raw(win, atom[_NET_WM_STATE_HIDDEN]);
+	XMapWindow(display, win);
 }
 
 void maximize_window (Window window) {
@@ -159,13 +338,14 @@ void maximize_window (Window window) {
 	printf("fullscreening, mods state: 0x%02x\n", state.mods);
 	if (state.mods & Mod1Mask)
 		XMoveResizeWindow(display, window, !hax.hax.attributes.x ? 0 :
-			hax.hax.attributes.x + hax.hax.attributes.width == root.width ?
-				root.width - ALT_FULLSCREEN_WIDTH : (
-					root.width - ALT_FULLSCREEN_WIDTH) / 2,
-			(root.height - ALT_FULLSCREEN_HEIGHT) / 2,
+			hax.hax.attributes.x + hax.hax.attributes.width == (int)root.width ?
+				(int)root.width - ALT_FULLSCREEN_WIDTH : (
+					(int)root.width - ALT_FULLSCREEN_WIDTH) / 2,
+			((int)root.height - ALT_FULLSCREEN_HEIGHT) / 2,
 			ALT_FULLSCREEN_WIDTH, ALT_FULLSCREEN_HEIGHT);
 	else
 		XMoveResizeWindow(display, window, 0, 0, root.width, root.height);
+	add_state_raw(window, atom[_NET_WM_STATE_FULLSCREEN]);
 }
 
 void restore_window (Window window) {
@@ -173,87 +353,61 @@ void restore_window (Window window) {
 	XGetWMSizeHints(display, window, &sizehints, VOID, atom[WM_NORMAL_HINTS]);
 	if ((USPosition | USSize) & sizehints.flags)
 		XMoveResizeWindow(display, window, sizehints.x, sizehints.y,
-			sizehints.width, sizehints.height);
+			(unsigned)sizehints.width, (unsigned)sizehints.height);
+	remove_state_raw(window, atom[_NET_WM_STATE_FULLSCREEN]);
+}
+
+// public method -- add state to given window WITH special behavior
+void add_state (Window window, Atom state) {
+	// special states that mean things to us
+	if (state == atom[_NET_WM_STATE_FULLSCREEN]) {
+		maximize_window(window);
+		return;
+	}
+	if (state == atom[_NET_WM_STATE_HIDDEN]) {
+		hide_window(window);
+		return;
+	}
+	// otherwise just do the thing
+	add_state_raw(window, state);
 }
 
 void remove_state (Window window, Atom state) {
-	if (state == atom[_NET_WM_STATE_FULLSCREEN])
+	// special states that mean things to us
+	if (state == atom[_NET_WM_STATE_FULLSCREEN]) {
 		restore_window(window);
-
-	int bits;
-	unsigned long count;
-
-	char *state_name = XGetAtomName(display, state);
-	Atom *states = XGetWindowPropertyArray(
-		window, atom[_NET_WM_STATE], atom[ATOM], &count, &bits
-	);
-	if (!count) {
-		printf("Can't remove %s(0x%08x from window 0x%08lx(%s) because it has"
-			" no _NET_WM_STATEs.\n", state_name, state, window,
-			window_title(window));
-		XFree(state_name);
 		return;
-	} else printf("Remove state %s(0x%08x) from window 0x%08lx(%s)\n",
-		state_name, state, window, window_title(window));
-
-	if (count) printf("Enumerating %d extant states\n", count);
-	for (unsigned long i = 0; i < count; i++) {
-		printf("state: %s\n", XGetAtomName(display, states[i]));
-		fflush(stdout);
 	}
-
-	unsigned long new_count = XDeleteAtomFromArray(states, count, state);
-	if (new_count < count) {
-		if (new_count) {
-			printf("0x%08x(%s) has %d remaining states, updating state property\n",
-				window, window_title(window), new_count);
-			XChangeProperty(display, window, atom[_NET_WM_STATE],
-				atom[ATOM], bits, PropModeReplace, (void *)states, new_count);
-		} else {
-			printf("0x%08x(%s) has zero remaining states, removing state property\n",
-				window, window_title(window));
-			XDeleteProperty(display, window, atom[_NET_WM_STATE]);
-		}
-	} else printf("Window 0x%08lx(%s)'s _NET_WM_STATE contains no %s\n",
-		window, window_title(window), state_name);
-
-	XFree(state_name);
-	XFree(states);
+	if (state == atom[_NET_WM_STATE_HIDDEN]) {
+		hide_window(window);
+		return;
+	}
+	// otherwise do the thing
+	remove_state_raw (window, state);
 }
 
-void add_state (Window window, Atom state) {
-	if (state == atom[_NET_WM_STATE_FULLSCREEN])
-		maximize_window(window);
+void toggle_state (Window window, Atom state) {
+	long unsigned count;
+	int bits;
 
-	char *state_name = XGetAtomName(display, state);
-	printf("Add state %s(0x%08x) to window 0x%08lx(%s)\n", state_name, state,
-		window, window_title(window));
-	XFree(state_name);
+	atom_diagnostic("Toggle state ", state, " ");
+	window_diagnostic("on window ", window, "\n");
 
-	unsigned long count;
-	Atom *states = (Atom *)XGetWindowPropertyArray(
-		window, atom[_NET_WM_STATE], atom[ATOM], &count, VOID
-	);
+	Atom *states = XGetWindowPropertyArray(window, atom[_NET_WM_STATE],
+		atom[ATOM], &count, &bits);
 
-	if (count) printf("Enumerating %d existing states:\n", count);
-	Bool found = False;
-	for (unsigned long i = 0; i < count && states[i]; i--) {
-		if (states[i] == state) found = True;
-		char *state_name = XGetAtomName(display, states[i]);
-		printf("%d: %s(0x%08x)\n", i, state_name, states[i]);
-		XFree(state_name);
-	}
-	if (found) {
-		puts("state already exists, not adding");
-		return;
+	if (bits) {
+		if (state_exists_internal(state, states, count))
+			remove_state_internal(window, state, states, count);
+		else add_state_internal(window, state, states, count);
 	}
 
-	size_t size = (++count) * sizeof(state);
-	states = realloc(states, size);
-	states[count - 1] = state;
-	XChangeProperty(display, window, atom[_NET_WM_STATE], atom[ATOM],
-		4 * sizeof(state), PropModeReplace, (void *)states, count);
 	XFree(states);
+	return;
+}
+
+void toggle_fullscreen (void) {
+	toggle_state(active_window(), atom[_NET_WM_STATE_FULLSCREEN]);
 }
 
 void set_sticky (Window window) {
@@ -261,46 +415,28 @@ void set_sticky (Window window) {
 	XDeleteProperty(display, window, atom[_NET_WM_DESKTOP]);
 }
 
-void toggle_fullscreen (void) {
-	Window w = active_window();
-	Atom f = atom[_NET_WM_STATE_FULLSCREEN];
-	if (XWindowPropertyArrayContains(w, atom[_NET_WM_STATE], f))
-		remove_state(w, f);
-	else add_state(w, f);
-}
-
-void hide_window (Window win) {
-	add_state(win, atom[_NET_WM_STATE_HIDDEN]);
-	XUnmapWindow(display, win);
-}
-
-void show_window (Window win) {
-	remove_state(win, atom[_NET_WM_STATE_HIDDEN]);
-	XMapWindow(display, win);
-}
-
-void activate_workspace (const uint32_t which) {
-	Window *windows = NULL;
-	unsigned count;
-
+void activate_workspace (const Workspace which) {
 	if ((uint32_t)-1 != which)
 		XChangeProperty(display, root.handle, atom[_NET_CURRENT_DESKTOP],
 			atom[CARDINAL], 32, PropModeReplace, (void *)&which, 1);
 
-	if (!XQueryTree(display, root.handle, VOID, VOID, &windows,
-		&count)) return;
+	Window *windows;
+	long unsigned count = managed_windows(&windows);
 
 	/* all windows visible */
 	if ((uint32_t)-1 == which)
-		for (int i = 0; i < count; i++)
+		for (long unsigned i = 0; i < count; i++)
 			show_window(windows[i]);
-	else for (int i = 0; i < count; i++) {
+	else for (long unsigned i = 0; i < count; i++) {
+		// show all sticky windows
 		if (XWindowPropertyArrayContains(windows[i], atom[_NET_WM_STATE],
 			atom[_NET_WM_STATE_STICKY])) {
 			show_window(windows[i]);
 			continue;
 		}
-		uint32_t *workspace = NULL;
+
+		// show all windows visible on the newly activated workspace
+		Workspace *workspace = NULL;
 		XGetWindowProperty(display, windows[i], atom[_NET_WM_DESKTOP], 0, 1,
 			False, atom[CARDINAL], VOID, VOID, VOID, VOID, (void *)&workspace);
 		if (!workspace) continue; /* window is not managed by pede */
@@ -311,39 +447,14 @@ void activate_workspace (const uint32_t which) {
 	}
 
 	XFree(windows);
-
-	XRaiseWindow(display, active_window());
-	focus_active_window();
+	//focus_active_window();
 }
 
-void set_workspace (Window window, uint32_t workspace) {
+void set_workspace (Window window, Workspace workspace) {
 	if (window == pede) return;
 	XChangeProperty(display, window, atom[_NET_WM_DESKTOP], atom[CARDINAL],
 		32, PropModeReplace, (void *)&workspace, 1);
 	activate_workspace(active_workspace());
-}
-
-int visible_windows (Window **ret) {
-	Window *windows = NULL;
-	unsigned window_count;
-
-	XQueryTree(display, root.handle, VOID, VOID, &windows, &window_count);
-	if (!windows) return window_count;
-
-	Window *visible = NULL;
-	unsigned visible_count = 0;
-	for (unsigned i = window_count; i--;) {
-		XWindowAttributes attrs;
-		XGetWindowAttributes(display, windows[i], &attrs);
-		if (IsViewable != attrs.map_state || XWindowPropertyArrayContains(
-			windows[i], atom[_NET_WM_WINDOW_TYPE],
-			atom[_NET_WM_WINDOW_TYPE_DESKTOP])) continue;
-		visible = realloc(visible, (1 + visible_count) * sizeof(*visible));
-		visible[visible_count++] = windows[i];
-	}
-	XFree(windows);
-	*ret = visible;
-	return visible_count;
 }
 
 void close_window (Window window) {
@@ -353,7 +464,7 @@ void close_window (Window window) {
 		display, window, False, NoEventMask, (XEvent *)&(XClientMessageEvent){
 			.type = ClientMessage, .display = display,
 			.window = window, .message_type = atom[WM_PROTOCOLS],
-			.format = 32, .data.l = { atom[WM_DELETE_WINDOW] }
+			.format = 32, .data.l = { (long)atom[WM_DELETE_WINDOW] }
 		}
 	);
 	//else XKillClient(display, window);
@@ -363,26 +474,19 @@ void close_window (Window window) {
 void alter_window_state (XClientMessageEvent event) {
 	switch (event.data.l[0]) {
 		case 0: // remove
-			remove_state(event.window, event.data.l[1]);
+			remove_state(event.window, (Atom)event.data.l[1]);
 			if (event.data.l[2])
-				remove_state(event.window, event.data.l[2]);
+				remove_state(event.window, (Atom)event.data.l[2]);
 		break;
 		case 1: // add
-			add_state(event.window, event.data.l[1]);
+			add_state(event.window, (Atom)event.data.l[1]);
 			if (event.data.l[2])
-				add_state(event.window, event.data.l[2]);
+				add_state(event.window, (Atom)event.data.l[2]);
 		break;
 		case 2: // toggle
-			if (XWindowPropertyArrayContains(
-				event.window, atom[_NET_WM_STATE], event.data.l[1])
-			) remove_state(event.window, event.data.l[1]);
-			else add_state(event.window, event.data.l[1]);
-			if (event.data.l[2]) {
-				if (XWindowPropertyArrayContains(
-					event.window, atom[_NET_WM_STATE], event.data.l[2]
-				)) remove_state(event.window, event.data.l[2]);
-				else add_state(event.window, event.data.l[2]);
-			}
+			toggle_state(event.window, (Atom)event.data.l[1]);
+			if (event.data.l[2])
+				toggle_state(event.window, (Atom)event.data.l[2]);
 		break;
 	}
 }
@@ -406,11 +510,11 @@ void refuse_selection_request (XSelectionRequestEvent request) {
 
 void map_window (XMapRequestEvent *ev) {
 	unsigned width, height;
-	unsigned long count;
-	unsigned char *workspace;
+	long unsigned count;
+	Workspace *workspace;
 
 	XGetWindowProperty(ev->display, ev->window, atom[_NET_WM_DESKTOP], 0,
-		1, False, atom[CARDINAL], VOID, VOID, &count, VOID, &workspace);
+		1, False, atom[CARDINAL], VOID, VOID, &count, VOID, (unsigned char **)&workspace);
 	if (count) {
 		printf("window 0x%08lx is apparently already on workspace %d\n", ev->window, *workspace);
 		XFree(workspace);
@@ -428,11 +532,12 @@ void map_window (XMapRequestEvent *ev) {
 	);
 
 	if (
-		(!(hints.flags & PPosition) && !x && !y) || x + width > root.width ||
-		y + height > root.height || x < 0 || y < 0
+		(!(hints.flags & PPosition) && !x && !y) ||
+		x + (int)width > (int)root.width ||
+		y + (int)height > (int)root.height || x < 0 || y < 0
 	) XMoveWindow(
 		ev->display, ev->window,
-		((int)root.width - width) / 2, ((int)root.height - height) / 2
+		((int)root.width - (int)width) / 2, ((int)root.height - (int)height) / 2
 	);
 	XMapWindow(ev->display, ev->window);
 }

@@ -32,9 +32,6 @@
 #include "move_modifiers.h"
 #include "size_modifiers.h"
 
-Window *clients;
-unsigned clients_count;
-
 // XGetErrorText opens an XrmDatabase connection, closes it, allocates memory,
 // frees it, and leaks about a meg and a half somewhere along the way. It only
 // leaks once, the first time you call it, but we don't need to burn that RAM
@@ -45,7 +42,8 @@ static const char *_XErrorList[] = {
 	"BadColor", "BadGC", "BadIDChoice", "BadName", "BadLength",
 	"BadImplementation", "unknownerror"
 };
-int death_proof (Display *display, XErrorEvent *error) {
+int death_proof (Display *ignored, XErrorEvent *error) {
+	ignored = ignored; // stfu gcc
 	if (18 < error->error_code) error->error_code = 18;
 	printf("X request %d: Error %d/%d.%d: %s\n", error->serial,
 		error->error_code, error->request_code, error->minor_code,
@@ -54,14 +52,14 @@ int death_proof (Display *display, XErrorEvent *error) {
 	return 0;
 }
 
-void set_window_name (Display *display, Window w, char *name) {
+void set_window_name (Window w, char *name) {
 	XTextProperty textprop;
 	XStringListToTextProperty(&name, 1, &textprop);
 	XStoreName(display, w, name);
 	XSetWMName(display, w, &textprop);
 	XChangeProperty(display, w, XInternAtom(display, "_NET_WM_NAME", False),
 		atom[UTF8_STRING], 8, PropModeReplace,
-		(unsigned char *)name, strlen(name));
+		(unsigned char *)name, (int)strlen(name));
 }
 
 typedef union {
@@ -69,7 +67,7 @@ typedef union {
 	uint32_t packed;
 } __attribute__((packed)) PIXEL32;
 
-XImage *load_image (Display *display, int screen, Visual *visual, char *filename) {
+XImage *load_image (Visual *visual, char *filename) {
 	PIXEL32 *data = malloc(WIDTH * HEIGHT * sizeof(PIXEL32));
 
 	FILE *file = fopen(filename, "r");
@@ -121,7 +119,10 @@ Bool signal_handler (void) {
 	case SIGUSR1:
 		cleanup();
 		execlp(argv0, argv0, NULL);
-		// we never get here anyway
+		// something has gone horribly wrong if this runs
+		puts("I can't execute myself. My binary has probably gone missing.");
+		puts("I will now crash. Say goodbye to your X session!");
+		exit(-1);
 	case SIGTERM:
 		puts("Terminated.");
 		return True;
@@ -135,7 +136,7 @@ Bool signal_handler (void) {
 	return False;
 }
 
-Bool XWaitEvent (Display *display) {
+Bool XWaitEvent (void) {
 	int Xfd = ConnectionNumber(display);
 	fd_set listen, pending;
 	FD_ZERO(&listen);
@@ -148,29 +149,39 @@ Bool XWaitEvent (Display *display) {
 	return False;
 }
 
-void event_loop (Display *display, Window pede, GC gc, XImage *img) {
+void event_loop (void) {
 	XEvent event;
 	BOX windowStart;
-	CLICK mouseStart = (CLICK){ .btn = -1 };
+	CLICK mouseStart = (CLICK){ .btn = (unsigned)-1 };
 	char moveSide = 0;
-	while (!XWaitEvent(display)) {
+	while (!XWaitEvent()) {
 		if (!XPending(display)) return;
 		XNextEvent(display, &event);
-		printf("event %s next request %d\n", event_names[event.type], XNextRequest(display)); fflush(stdout);
+		//printf("event %s next request %d\n", event_names[event.type],
+		//	XNextRequest(display));
+		//fflush(stdout);
 		if (KeyPress == event.type || KeyRelease == event.type)
 			handle_key_events(event);
 		else switch (event.type) {
 		case MapNotify:
 			if (event.xmaprequest.window == pede) {
 				puts("I have arrived.");
+				fflush(stdout);
 				XLowerWindow(display, pede);
+			} else {
+				window_diagnostic("Window ", event.xmaprequest.window,
+					" has been mapped\n");
+				// FIXME: do not raise if keypress within last N second(s)?
+				XRaiseWindow(event.xmaprequest.display,
+					event.xmaprequest.window);
+				focus_active_window();
 			}
 			break;
 		case ConfigureRequest:
 			XConfigureWindow(
 				event.xconfigurerequest.display,
 				event.xconfigurerequest.window,
-				event.xconfigurerequest.value_mask,
+				(unsigned)event.xconfigurerequest.value_mask,
 				&(XWindowChanges){
 					.x = event.xconfigurerequest.x,
 					.y = event.xconfigurerequest.y,
@@ -181,11 +192,9 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 					.stack_mode = event.xconfigurerequest.detail,
 				}
 			);
-			XSync(display, False);
 			break;
 		case Expose:
 			XPutImage(display, pede, gc, img, 0, 0, 0, 0, WIDTH, HEIGHT);
-			XSync(display, False);
 			break;
 		case SelectionRequest: // ICCCM compliance, request always refused
 			refuse_selection_request(event.xselectionrequest);
@@ -193,26 +202,26 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 		case ClientMessage:
 			// switch to given workspace
 			if (event.xclient.message_type == atom[_NET_CURRENT_DESKTOP])
-				activate_workspace(*event.xclient.data.l);
+				activate_workspace((Workspace)*event.xclient.data.l);
 			// move window to given workspace
 			else if (event.xclient.message_type == atom[_NET_WM_DESKTOP])
-				set_workspace(event.xclient.window, *event.xclient.data.l);
+				set_workspace(event.xclient.window,
+					(Workspace)*event.xclient.data.l);
 			// add or remove various states to _NET_WM_STATE properties
 			else if (event.xclient.message_type == atom[_NET_WM_STATE])
 				alter_window_state(event.xclient);
 			// window requests focus
 			else if (event.xclient.message_type == atom[_NET_ACTIVE_WINDOW]) {
-				unsigned long count = 0;
-				unsigned char *prop = NULL;
+				Workspace *workspace = NULL;
 				XGetWindowProperty(event.xclient.display, event.xclient.window,
 					atom[_NET_WM_DESKTOP], 0, 1, False, atom[CARDINAL],
-					VOID, VOID, &count, VOID, &prop);
-				if (count) {
-					activate_workspace(*prop);
+					VOID, VOID, VOID, VOID, (void *)&workspace);
+				if (workspace) {
+					activate_workspace(*workspace);
 					XRaiseWindow(event.xclient.display, event.xclient.window);
-					focus_active_window();
+					focus_window(event.xclient.window);
+					XFree(workspace);
 				}
-				XFree(prop);
 			} else {
 				// idfk...
 				char *state_name = XGetAtomName(display,
@@ -223,36 +232,15 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 			}
 			break;
 		case MapRequest:
-			clients = realloc(clients, sizeof(*clients) * (clients_count + 1));
-			clients[clients_count] = event.xmaprequest.window;
-			clients_count++;
-			XChangeProperty(display, root.handle,
-				atom[_NET_CLIENT_LIST], atom[WINDOW], 32, PropModeReplace,
-				(void *)clients, clients_count);
 			map_window(&event.xmaprequest);
 			set_workspace(event.xmaprequest.window, active_workspace());
 			focus_window(event.xmaprequest.window);
 			printf("Window 0x%08lx mapped\n", event.xmaprequest.window);
 			break;
-		case DestroyNotify: {
-			puts("destroynotify event:");
-			printf("serial: %lu\n", event.xdestroywindow.serial);
-			printf("send_event: %d\n", event.xdestroywindow.send_event);
-			printf("display: 0x%lx\n", event.xdestroywindow.display);
-			printf("event: 0x%08lx\n", event.xdestroywindow.event);
-			printf("window: 0x%08lx\n", event.xdestroywindow.window);
-			unsigned new_count = XDeleteWindowFromArray(clients,
-				clients_count, event.xdestroywindow.window);
-			if (new_count != clients_count) {
-				clients_count = new_count;
-				clients = realloc(clients, new_count * sizeof(*clients));
-				XChangeProperty(display, root.handle,
-					atom[_NET_CLIENT_LIST], atom[WINDOW], 32,
-					PropModeReplace, (void *)clients, new_count);
-				printf("Window 0x%08lx destroyed\n",
-					event.xdestroywindow.window);
-			}
-		} // fall through
+		case DestroyNotify:
+			// Can't get title of a destroyed window, so don't do window_diagnostic
+			printf("Window 0x%08x has been destroyed.\n", event.xdestroywindow.window);
+			// fall through
 		case CirculateNotify:
 			focus_active_window();
 			break;
@@ -285,8 +273,8 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 				.btn = event.xbutton.button
 			};
 			XGetGeometry(display, event.xbutton.subwindow, VOID,
-				&windowStart.x, &windowStart.y, &windowStart.w, &windowStart.h,
-				VOID, VOID);
+				&windowStart.pos.x, &windowStart.pos.y, &windowStart.size.w,
+				&windowStart.size.h, VOID, VOID);
 			XGrabPointer(event.xbutton.display, event.xbutton.subwindow,
 				True, PointerMotionMask | ButtonReleaseMask,
 				GrabModeAsync, GrabModeAsync, None, None, event.xbutton.time);
@@ -294,14 +282,15 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 			if (Button1 == event.xbutton.button ||
 				Button9 == event.xbutton.button) break; // move
 
-			int relative_x = mouseStart.x - windowStart.x;
-			int relative_y = mouseStart.y - windowStart.y;
+			int relative_x = mouseStart.x - windowStart.pos.x;
+			int relative_y = mouseStart.y - windowStart.pos.y;
 
-			moveSide = // calculate which nonant the click occurred in
-				((relative_y < 2 * windowStart.h / 3) << SIDE_TOP_BIT) |
-				((relative_x > windowStart.w / 3) << SIDE_RIGHT_BIT) |
-				((relative_y > windowStart.h / 3) << SIDE_BOTTOM_BIT) |
-				((relative_x < 2 * windowStart.w / 3) << SIDE_LEFT_BIT);
+			moveSide = (char)( // calculate which nonant the click occurred in
+				((relative_y < (int)(2 * windowStart.size.h / 3)) << SIDE_TOP_BIT) |
+				((relative_x > (int)(windowStart.size.w / 3)) << SIDE_RIGHT_BIT) |
+				((relative_y > (int)(windowStart.size.h / 3)) << SIDE_BOTTOM_BIT) |
+				((relative_x < (int)(2 * windowStart.size.w / 3)) << SIDE_LEFT_BIT)
+			);
 
 			// if middle side nonant clicked, move only that side
 			// I feel like there's better code for this...
@@ -328,19 +317,20 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 
 			if (Button1 == mouseStart.btn || Button9 == mouseStart.btn) {
 				// move
-				target.x = windowStart.x + xdiff;
-				target.y = windowStart.y + ydiff;
+				target.pos.x = windowStart.pos.x + xdiff;
+				target.pos.y = windowStart.pos.y + ydiff;
 
 				for (unsigned i = 0; i < move_modifiers_length; i++)
 					move_modifiers[i](event.xmotion.window, &target);
 			} else {
 				// if center nonant clicked, always grow first
 				if (SIDE_CENTER(moveSide)) {
-					moveSide =
+					moveSide = (char)(
 						((ydiff < 0) << SIDE_TOP_BIT) |
 						((xdiff > 0) << SIDE_RIGHT_BIT) |
 						((ydiff > 0) << SIDE_BOTTOM_BIT) |
-						((xdiff < 0) << SIDE_LEFT_BIT);
+						((xdiff < 0) << SIDE_LEFT_BIT)
+					);
 					int xmag = abs(xdiff);
 					int ymag = abs(ydiff);
 					if (xmag / 2 > ymag)
@@ -350,23 +340,32 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 				}
 
 				if (SIDE_TOP(moveSide)) {
-					target.h = MAX(MINIMUM_SIZE, (int)windowStart.h - ydiff);
-					target.y -= target.h - windowStart.h;
+					target.size.h = MAX(
+						MINIMUM_SIZE, windowStart.size.h - (unsigned)ydiff
+					);
+					target.pos.y -= (int)(target.size.h - windowStart.size.h);
 				} else if (SIDE_BOTTOM(moveSide))
-					target.h = MAX(MINIMUM_SIZE, (int)windowStart.h + ydiff);
+					target.size.h = MAX(
+						MINIMUM_SIZE, windowStart.size.h + (unsigned)ydiff
+					);
 
 				if (SIDE_LEFT(moveSide)) {
-					target.w = MAX(MINIMUM_SIZE, (int)windowStart.w - xdiff);
-					target.x -= target.w - windowStart.w;
+					target.size.w = MAX(
+						MINIMUM_SIZE, windowStart.size.w - (unsigned)xdiff
+					);
+					target.pos.x -= (int)(target.size.w - windowStart.size.w);
 				} else if (SIDE_RIGHT(moveSide))
-					target.w = MAX(MINIMUM_SIZE, (int)windowStart.w + xdiff);
+					target.size.w = MAX(
+						MINIMUM_SIZE, windowStart.size.w + (unsigned)xdiff
+					);
 
 				for (unsigned i = 0; i < size_modifiers_length; i++)
 					size_modifiers[i](event.xmotion.window, moveSide, &target);
 			}
 
-			XMoveResizeWindow(display, event.xmotion.window,
-				target.x, target.y, target.w, target.h
+			XMoveResizeWindow(
+				display, event.xmotion.window,
+				target.pos.x, target.pos.y, target.size.w, target.size.h
 			);
 			break;
 		case ButtonRelease:
@@ -386,6 +385,7 @@ void event_loop (Display *display, Window pede, GC gc, XImage *img) {
 		default:
 			printf("UntrackedEvent%d\n", event.type);
 		}
+		XSync(display, False);
 	};
 }
 
@@ -401,6 +401,8 @@ static void lock_ignoring_button_hook (unsigned btn, unsigned mod) {
 }
 
 int main (int argc, char **argv, char **envp) {
+	// We only ever need argv[0]. If it doesn't exist, we'll just crash later.
+	argc = argc;
 #ifdef DEBUG
 	enable_debug();
 #endif
@@ -437,12 +439,12 @@ int main (int argc, char **argv, char **envp) {
 #if defined(LEFT) && defined(TOP)
 		LEFT, TOP,
 #elif defined(RIGHT) && defined(TOP)
-		root.width - WIDTH - RIGHT, TOP,
+		(int)root.width - WIDTH - RIGHT, TOP,
 #elif defined(LEFT) && defined(BOTTOM)
-		LEFT, root.height - HEIGHT - BOTTOM,
+		LEFT, (int)root.height - HEIGHT - BOTTOM,
 #elif defined(RIGHT) && defined(BOTTOM)
-		root.width - WIDTH - RIGHT,
-		root.height - HEIGHT - BOTTOM,
+		(int)root.width - WIDTH - RIGHT,
+		(int)root.height - HEIGHT - BOTTOM,
 #else
 #error "I don't know where you want the button, man..."
 #endif
@@ -463,7 +465,7 @@ int main (int argc, char **argv, char **envp) {
 		atom[UTF8_STRING], 8, PropModeReplace, (void *)"pede", 4);
 	char *title = "Pegasus Epsilon's Desktop Environment";
 	XChangeProperty(display, pede, XInternAtom(display, "_NET_WM_NAME", False),
-		atom[UTF8_STRING], 8, PropModeReplace, (void *)title, strlen(title));
+		atom[UTF8_STRING], 8, PropModeReplace, (void *)title, (int)strlen(title));
 	XChangeProperty(display, pede, atom[_NET_WM_WINDOW_TYPE], atom[ATOM], 32,
 		PropModeReplace, (void *)&atom[_NET_WM_WINDOW_TYPE_DESKTOP], 1);
 	XStoreName(display, pede, title);
@@ -479,7 +481,7 @@ int main (int argc, char **argv, char **envp) {
 	dirname(filename);
 	filename = realloc(filename, 2 + strlen(filename) + strlen(FILENAME));
 	strcat(strcat(filename, "/"), FILENAME);
-	img = load_image(display, screen, visualinfo.visual, filename);
+	img = load_image(visualinfo.visual, filename);
 	// load_image frees the filename for us
 	// free(filename);
 
@@ -494,9 +496,7 @@ int main (int argc, char **argv, char **envp) {
 	XChangeProperty(display, root.handle,
 		XInternAtom(display, "_NET_NUMBER_OF_DESKTOPS", False),
 		atom[CARDINAL], 32, PropModeReplace, (void *)"\4\0\0\0", 1);
-	// FIXME: EWMH this should contain an actual managed window list from startup
-	XChangeProperty(display, root.handle, atom[_NET_CLIENT_LIST], atom[WINDOW],
-		32, PropModeReplace, VOID, 0);
+	update_client_list();
 
 	// subscribe to events we actually care about
 	// if the WM being replaced destroys their input selection holding window
@@ -523,7 +523,7 @@ int main (int argc, char **argv, char **envp) {
 	XMapWindow(display, pede);
 
 	// actually do the thing
-	event_loop(display, pede, gc, img);
+	event_loop();
 	// done doing the thing, shut it down, shut it down forever
 
 	// show all windows

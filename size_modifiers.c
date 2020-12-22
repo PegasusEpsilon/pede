@@ -16,46 +16,65 @@
 #include "atoms.h"
 #include "wm_core.h"
 
-void keep_on_screen (Window sizing, char side, BOX *t) {
+void keep_on_screen (Window ignored, char side, BOX *t) {
+	ignored = ignored; // stfu gcc
 	// constrain windows to viewable area
-	if (SIDE_TOP(side) && t->y < 0) { t->h += t->y; t->y = 0; }
-	else if (SIDE_BOTTOM(side) && t->y + t->h > root.height)
-		t->h = root.height - t->y;
-	if (SIDE_LEFT(side) && t->x < 0) { t->w += t->x; t->x = 0; }
-	else if (SIDE_RIGHT(side) && t->x + t->w > root.width)
-		t->w = root.width - t->x;
+	if (SIDE_TOP(side) && t->pos.y < 0) {
+		t->size.h += (unsigned)t->pos.y;
+		t->pos.y = 0;
+	} else if (SIDE_BOTTOM(side) && (unsigned)t->pos.y + t->size.h > root.height)
+		t->size.h = root.height - (unsigned)t->pos.y;
+	if (SIDE_LEFT(side) && t->pos.x < 0) {
+		t->size.w += (unsigned)t->pos.x;
+		t->pos.x = 0;
+	} else if (SIDE_RIGHT(side) && (unsigned)t->pos.x + t->size.w > root.width)
+		t->size.w = root.width - (unsigned)t->pos.x;
 }
 
-void snap_to_edges (Window sizing, char side, BOX *t) {
+void snap_to_edges (Window ignored, char side, BOX *t) {
+	ignored = ignored; // stfu gcc
 	// snap while resizing (window size varies)
-	unsigned snap_w = root.width - t->x;
-	unsigned snap_h = root.height - t->y;
-	if (SIDE_TOP(side) && abs(t->y) < SNAP) { t->h += t->y; t->y = 0; }
-	else if (SIDE_BOTTOM(side) && abs(snap_h - t->h) < SNAP) t->h = snap_h;
-	if (SIDE_LEFT(side) && abs(t->x) < SNAP) { t->w += t->x; t->x = 0; }
-	else if (SIDE_RIGHT(side) && abs(snap_w - t->w) < SNAP) t->w = snap_w;
+	unsigned snap_w = root.width - (unsigned)t->pos.x;
+	unsigned snap_h = root.height - (unsigned)t->pos.y;
+	if (SIDE_TOP(side) && abs(t->pos.y) < SNAP) {
+		t->size.h += (unsigned)t->pos.y;
+		t->pos.y = 0;
+	} else if (SIDE_BOTTOM(side) && abs((int)snap_h - (int)t->size.h) < SNAP)
+		t->size.h = snap_h;
+	if (SIDE_LEFT(side) && abs(t->pos.x) < SNAP) {
+		t->size.w += (unsigned)t->pos.x;
+		t->pos.x = 0;
+	} else if (SIDE_RIGHT(side) && abs((int)snap_w - (int)t->size.w) < SNAP)
+		t->size.w = snap_w;
 }
 
-void snap_to_center (Window sizing, char side, BOX *t) {
-	POINT center = (POINT){ .x = root.width / 2, .y = root.height / 2 };;
-	POINT target = (POINT){ .x = t->x + t->w, .y = t->y + t->h };
+void snap_to_center (Window ignored, char side, BOX *t) {
+	ignored = ignored; // stfu gcc
+	POINT center = (POINT){
+		.x = (int)root.width / 2,
+		.y = (int)root.height / 2
+	};
+	POINT target = (POINT){
+		.x = t->pos.x + (int)t->size.w,
+		.y = t->pos.y + (int)t->size.h
+	};
 
 	if (SIDE_TOP(side)) {
-		if (abs(center.y - t->y) < SNAP) {
-			t->h += t->y - center.y;
-			t->y = center.y;
+		if (abs(center.y - t->pos.y) < SNAP) {
+			t->size.h += (unsigned)(t->pos.y - center.y);
+			t->pos.y = center.y;
 		}
 	} else if (SIDE_BOTTOM(side))
 		if (abs(center.y - target.y) < SNAP)
-			t->h = center.y - t->y;
+			t->size.h = (unsigned)(center.y - t->pos.y);
 	if (SIDE_LEFT(side)) {
-		if (abs(center.x - t->x) < SNAP) {
-			t->w += t->x - center.x;
-			t->x = center.x;
+		if (abs(center.x - t->pos.x) < SNAP) {
+			t->size.w += (unsigned)(t->pos.x - center.x);
+			t->pos.x = center.x;
 		}
 	} else if (SIDE_RIGHT(side))
 		if (abs(center.x - target.x) < SNAP)
-			t->w = center.x - t->x;
+			t->size.w = (unsigned)(center.x - t->pos.x);
 }
 
 static void snap_to_siblings (Window sizing, char side, BOX *t) {
@@ -69,9 +88,10 @@ static void snap_to_siblings (Window sizing, char side, BOX *t) {
 		if (sizing == windows[i]) continue;
 		siblings = realloc(siblings, (2 + sibling_count) * sizeof(*siblings));
 		XGetGeometry(display, windows[i], VOID,
-			(signed *)&siblings[sibling_count].x,
-			(signed *)&siblings[sibling_count].y,
-			&siblings[sibling_count + 1].x, &siblings[sibling_count + 1].y,
+			&siblings[sibling_count].x,
+			&siblings[sibling_count].y,
+			(unsigned *)&siblings[sibling_count + 1].x,
+			(unsigned *)&siblings[sibling_count + 1].y,
 			VOID, VOID);
 		siblings[sibling_count + 1].x += siblings[sibling_count].x;
 		siblings[sibling_count + 1].y += siblings[sibling_count].y;
@@ -84,66 +104,69 @@ static void snap_to_siblings (Window sizing, char side, BOX *t) {
 	XFree(windows);
 	if (!sibling_count) return;
 
-	POINT target = (POINT){ .x = t->x + t->w, .y = t->y + t->h };
+	POINT target = (POINT){
+		.x = t->pos.x + (int)t->size.w,
+		.y = t->pos.y + (int)t->size.h
+	};
 
-	struct { unsigned closest, delta; } snap = { .delta = -1 };
+	struct { unsigned closest, delta; } snap = { .delta = (unsigned)-1 };
 	unsigned delta;
 
 	if (SIDE_TOP(side)) {
 		for (unsigned i = 0; i < sibling_count; i++) {
-			delta = abs(t->y - siblings[i].y);
+			delta = (unsigned)abs(t->pos.y - siblings[i].y);
 			if (snap.delta > delta) {
 				snap.delta = delta;
-				snap.closest = siblings[i].y;
+				snap.closest = (unsigned)siblings[i].y;
 			}
 		}
 		printf("top delta: %d\n", snap.delta);
 		if (snap.delta < SNAP) {
 			puts("snapping top");
-			t->h += t->y - snap.closest;
-			t->y = snap.closest;
+			t->size.h += (unsigned)t->pos.y - snap.closest;
+			t->pos.y = (int)snap.closest;
 		}
 	} else if (SIDE_BOTTOM(side)) {
 		for (unsigned i = 0; i < sibling_count; i++) {
-			delta = abs(target.y - siblings[i].y);
+			delta = (unsigned)abs(target.y - siblings[i].y);
 			if (snap.delta > delta) {
 				snap.delta = delta;
-				snap.closest = siblings[i].y;
+				snap.closest = (unsigned)siblings[i].y;
 			}
 		}
 		printf("bottom delta: %d\n", snap.delta);
 		if (snap.delta != (unsigned)-1 && snap.delta < SNAP) {
 			puts("snapping bottom");
-			t->h = snap.closest - t->y;
+			t->size.h = snap.closest - (unsigned)t->pos.y;
 		}
 	}
-	snap.delta = -1;
+	snap.delta = (unsigned)-1;
 	if (SIDE_LEFT(side)) {
 		for (unsigned i = 0; i < sibling_count; i++) {
-			delta = abs(t->x - siblings[i].x);
+			delta = (unsigned)abs(t->pos.x - siblings[i].x);
 			if (snap.delta > delta) {
 				snap.delta = delta;
-				snap.closest = siblings[i].x;
+				snap.closest = (unsigned)siblings[i].x;
 			}
 		}
 		printf("left delta: %d\n", snap.delta);
-		if (-1 != snap.delta && snap.delta < SNAP) {
+		if ((unsigned)-1 != snap.delta && snap.delta < SNAP) {
 			puts("snapping left");
-			t->w += t->x - snap.closest;
-			t->x = snap.closest;
+			t->size.w += (unsigned)t->pos.x - snap.closest;
+			t->pos.x = (int)snap.closest;
 		}
 	} else if (SIDE_RIGHT(side)) {
 		for (unsigned i = 0; i < sibling_count; i++) {
-			delta = abs(target.x - siblings[i].x);
+			delta = (unsigned)abs(target.x - siblings[i].x);
 			if (snap.delta > delta) {
 				snap.delta = delta;
-				snap.closest = siblings[i].x;
+				snap.closest = (unsigned)siblings[i].x;
 			}
 		}
 		printf("right delta: %d\n", snap.delta);
-		if (-1 != snap.delta && snap.delta < SNAP) {
+		if ((unsigned)-1 != snap.delta && snap.delta < SNAP) {
 			puts("snapping right");
-			t->w = snap.closest - t->x;
+			t->size.w = snap.closest - (unsigned)t->pos.x;
 		}
 	}
 

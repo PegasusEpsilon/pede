@@ -43,7 +43,7 @@ void initialize_atom_cache (Display *display, char **envp) {
 			// according to the relevant standards, but we will at least
 			// continue to function (wrongly) without an update.
 			if (NULL == (end = strchr(start, '.'))) end = strchr(start, 0);
-			size_t len = end - start;
+			size_t len = (size_t)(end - start);
 			atom_names[WM_Sn] = calloc(1, len + 5);
 			strncat(strncpy(atom_names[WM_Sn], "WM_S", 5), start, len);
 			break;

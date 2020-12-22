@@ -14,43 +14,46 @@
 #include "types.h"
 #include "defines.h"
 
-static void keep_on_screen (Window moving, BOX *t) {
+static void keep_on_screen (Window ignored, BOX *t) {
+	ignored = ignored; // stfu gcc
 	// constrain windows to viewable area
-	t->x = MIN(MAX(t->x, 0), root.width - t->w);
-	t->y = MIN(MAX(t->y, 0), root.height - t->h);
+	t->pos.x = MIN(MAX(t->pos.x, 0), (int)(root.width - t->size.w));
+	t->pos.y = MIN(MAX(t->pos.y, 0), (int)(root.height - t->size.h));
 }
 
-static void snap_to_center (Window moving, BOX *t) {
+static void snap_to_center (Window ignored, BOX *t) {
+	ignored = ignored; // stfu gcc
 	//POINT s_center = (POINT){ root.width / 2, root.height / 2 };
 	//POINT w_center = (POINT){ t->width / 2, t->h / 2 };
 	POINT center = (POINT){
-		.x = (root.width - t->w) / 2,
-		.y = (root.height - t->h) / 2
+		.x = (int)(root.width - t->size.w) / 2,
+		.y = (int)(root.height - t->size.h) / 2
 	};
-	if (abs(center.x - t->x) < SNAP)
-		t->x = center.x;
-	if (abs(center.y - t->y) < SNAP)
-		t->y = center.y;
+	if (abs((int)center.x - t->pos.x) < SNAP)
+		t->pos.x = (int)center.x;
+	if (abs((int)center.y - t->pos.y) < SNAP)
+		t->pos.y = (int)center.y;
 }
 
-static void snap_to_edges (Window moving, BOX *t) {
+static void snap_to_edges (Window ignored, BOX *t) {
+	ignored = ignored; // stfu gcc
 	// snap while dragging (window size constant)
-	int snap_x = root.width - t->w;
-	int snap_y = root.height - t->h;
-	int top_snap = abs(t->y);
-	int left_snap = abs(t->x);
-	int right_snap = abs(snap_x - t->x);
-	int bottom_snap = abs(snap_y - t->y);
+	unsigned snap_x = root.width - t->size.w;
+	unsigned snap_y = root.height - t->size.h;
+	int top_snap = abs(t->pos.y);
+	int left_snap = abs(t->pos.x);
+	int right_snap = abs((int)snap_x - t->pos.x);
+	int bottom_snap = abs((int)snap_y - t->pos.y);
 
 	if (top_snap <= bottom_snap) {
-		if (top_snap < SNAP) t->y = 0;
+		if (top_snap < SNAP) t->pos.y = 0;
 	} else
-		if (bottom_snap < SNAP) t->y = snap_y;
+		if (bottom_snap < SNAP) t->pos.y = (int)snap_y;
 
 	if (left_snap <= right_snap) {
-		if (left_snap < SNAP) t->x = 0;
+		if (left_snap < SNAP) t->pos.x = 0;
 	} else
-		if (right_snap < SNAP) t->x = snap_x;
+		if (right_snap < SNAP) t->pos.x = (int)snap_x;
 }
 
 static void snap_to_siblings (Window moving, BOX *t) {
@@ -72,9 +75,10 @@ static void snap_to_siblings (Window moving, BOX *t) {
 			atom[_NET_WM_WINDOW_TYPE_DESKTOP])) continue;
 		siblings = realloc(siblings, (2 + sibling_count) * sizeof(*siblings));
 		XGetGeometry(display, windows[i], VOID,
-			(signed *)&siblings[sibling_count].x,
-			(signed *)&siblings[sibling_count].y,
-			&siblings[sibling_count + 1].x, &siblings[sibling_count + 1].y,
+			&siblings[sibling_count].x,
+			&siblings[sibling_count].y,
+			(unsigned int *)&siblings[sibling_count + 1].x,
+			(unsigned int *)&siblings[sibling_count + 1].y,
 			VOID, VOID);
 		// convert width/height to root coordinate space
 		siblings[sibling_count + 1].x += siblings[sibling_count].x;
@@ -90,34 +94,38 @@ static void snap_to_siblings (Window moving, BOX *t) {
 	XFree(windows);
 	if (!sibling_count) return;
 
-	POINT target = (POINT){ .x = t->x + t->w, .y = t->y + t->h };
+	POINT target = (POINT){
+		.x = t->pos.x + (int)t->size.w,
+		.y = t->pos.y + (int)t->size.h
+	};
 
 	// this initializer is ugly as fuck...
 	struct { unsigned closest, delta; } snaps[4] = {
-		{ .delta = -1 }, { .delta = -1 }, { .delta = -1 }, { .delta = -1 }
+		{ .delta = (unsigned)-1 }, { .delta = (unsigned)-1 },
+		{ .delta = (unsigned)-1 }, { .delta = (unsigned)-1 }
 	};
 	unsigned delta;
 
 	for (unsigned i = 0; i < sibling_count; i++) {
-		delta = abs(t->x - siblings[i].x);
+		delta = (unsigned)abs(t->pos.x - siblings[i].x);
 		if (delta < snaps[SIDE_LEFT_BIT].delta) {
 			snaps[SIDE_LEFT_BIT].delta = delta;
-			snaps[SIDE_LEFT_BIT].closest = siblings[i].x;
+			snaps[SIDE_LEFT_BIT].closest = (unsigned)siblings[i].x;
 		}
-		delta = abs(t->y - siblings[i].y);
+		delta = (unsigned)abs(t->pos.y - siblings[i].y);
 		if (delta < snaps[SIDE_TOP_BIT].delta) {
 			snaps[SIDE_TOP_BIT].delta = delta;
-			snaps[SIDE_TOP_BIT].closest = siblings[i].y;
+			snaps[SIDE_TOP_BIT].closest = (unsigned)siblings[i].y;
 		}
-		delta = abs(target.x - siblings[i].x);
+		delta = (unsigned)abs(target.x - siblings[i].x);
 		if (delta < snaps[SIDE_RIGHT_BIT].delta) {
 			snaps[SIDE_RIGHT_BIT].delta = delta;
-			snaps[SIDE_RIGHT_BIT].closest = siblings[i].x;
+			snaps[SIDE_RIGHT_BIT].closest = (unsigned)siblings[i].x;
 		}
-		delta = abs(target.y - siblings[i].y);
+		delta = (unsigned)abs(target.y - siblings[i].y);
 		if (delta < snaps[SIDE_BOTTOM_BIT].delta) {
 			snaps[SIDE_BOTTOM_BIT].delta = delta;
-			snaps[SIDE_BOTTOM_BIT].closest = siblings[i].y;
+			snaps[SIDE_BOTTOM_BIT].closest = (unsigned)siblings[i].y;
 		}
 	}
 	free(siblings);
@@ -131,15 +139,15 @@ static void snap_to_siblings (Window moving, BOX *t) {
 
 	if (snaps[SIDE_BOTTOM_BIT].delta < snaps[SIDE_TOP_BIT].delta) {
 		if (snaps[SIDE_BOTTOM_BIT].delta < SNAP)
-			t->y = snaps[SIDE_BOTTOM_BIT].closest - t->h;
+			t->pos.y = (int)(snaps[SIDE_BOTTOM_BIT].closest - t->size.h);
 	} else if (snaps[SIDE_TOP_BIT].delta < SNAP)
-		t->y = snaps[SIDE_TOP_BIT].closest;
+		t->pos.y = (int)snaps[SIDE_TOP_BIT].closest;
 
 	if (snaps[SIDE_RIGHT_BIT].delta < snaps[SIDE_LEFT_BIT].delta) {
 		if (snaps[SIDE_RIGHT_BIT].delta < SNAP)
-			t->x = snaps[SIDE_RIGHT_BIT].closest - t->w;
+			t->pos.x = (int)(snaps[SIDE_RIGHT_BIT].closest - t->size.w);
 	} else if (snaps[SIDE_LEFT_BIT].delta < SNAP)
-		t->x = snaps[SIDE_LEFT_BIT].closest;
+		t->pos.x = (int)snaps[SIDE_LEFT_BIT].closest;
 }
 
 void (*move_modifiers[])(Window, BOX *) = {

@@ -10,17 +10,19 @@
 #include <X11/Xlib.h>
 #include <stdint.h>
 
+#include "types.h"
+
 extern long long nul;
 #define VOID ((void *)&nul)
 extern Display *display;
 extern struct { Window handle; unsigned width, height; } root;
 extern Window pede;
-extern unsigned char active_workspace (void);
+extern uint32_t active_workspace (void);
 Window active_window (void);
 void focus_window (Window);
 void focus_active_window (void);
-void activate_workspace (const uint32_t);
-void set_workspace (Window, uint32_t);
+void activate_workspace (const Workspace);
+void set_workspace (const Window, const Workspace);
 char *window_title (Window);
 void set_sticky (Window);
 /* TODO:
@@ -28,9 +30,11 @@ void clear_sticky (Window);
 void set_bottom (Window);
 void set_top (Window);
 */
-void *XGetWindowPropertyArray (Window, Atom, Atom, unsigned long *);
+void *XGetWindowPropertyArray (Window, Atom, Atom, long unsigned *);
 Bool XWindowPropertyArrayContains (Window, Atom, Atom);
-unsigned visible_windows(Window **windows);
+unsigned visible_windows (Window **);
+void update_client_list (void);
+void window_diagnostic (char *, Window, char *);
 void toggle_fullscreen (void);
 void close_window (Window);
 void remove_state (Window, Atom);

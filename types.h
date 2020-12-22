@@ -7,8 +7,10 @@
 #ifndef TYPES_H
 #define TYPES_H
 
-typedef struct { int x, y; unsigned w, h; } BOX;
-typedef struct { unsigned x, y; } POINT;
-typedef struct { unsigned x, y, btn; } CLICK;
+typedef long Workspace;
+typedef struct { int x, y; } POINT;
+typedef struct { unsigned w, h; } SIZE;
+typedef struct { POINT pos; SIZE size; } BOX;
+typedef struct { int x, y; unsigned btn; } CLICK;
 
 #endif // TYPES_H
