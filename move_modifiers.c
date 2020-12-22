@@ -143,9 +143,6 @@ static void snap_to_siblings (Window moving, BOX *t) {
 }
 
 void (*move_modifiers[])(Window, BOX *) = {
-	keep_on_screen,
-	snap_to_edges,
-	snap_to_center,
-	snap_to_siblings,
+	MOVE_MODIFIERS
 };
 unsigned move_modifiers_length = sizeof(move_modifiers) / sizeof(void (*));

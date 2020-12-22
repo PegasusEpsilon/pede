@@ -151,9 +151,6 @@ static void snap_to_siblings (Window sizing, char side, BOX *t) {
 }
 
 void (*size_modifiers[])(Window sizing, char side, BOX *) = {
-	keep_on_screen,
-	snap_to_edges,
-	snap_to_siblings,
-	snap_to_center
+	RESIZE_MODIFIERS
 };
 unsigned size_modifiers_length = sizeof(size_modifiers) / sizeof(void (*));

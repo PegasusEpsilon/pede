@@ -7,6 +7,28 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+// comma-separated list of window move/resize modifiers.
+// they pretty much do what they say on the tin.
+// remove whichever modifiers you don't like to disable only that one.
+//
+// valid MOVE_MODIFIERS:
+//   keep_on_screen - keeps all parts of all windows on the visible screen
+//   snap_to_edges - snaps windows to screen edges
+//   snap_to_siblings - snaps windows to each other
+//   snap_to_center - snaps windows to center of screen (vertical and horizontal)
+//
+// valid RESIZE_MODIFIERS:
+//   keep_on_screen - same as above, but when resizing
+//   snap_to_edges - same as above, but when resizing
+//   snap_to_siblings - same as above, but when resizing
+//   snap_to_center - same as above, but when resizing
+//
+#define MOVE_MODIFIERS keep_on_screen, snap_to_edges, snap_to_siblings, snap_to_center
+#define RESIZE_MODIFIERS keep_on_screen, snap_to_edges, snap_to_siblings, snap_to_center
+
+// snap distance, 0 to disable ALL snapping (but not keep_on_screen!)
+#define SNAP 25
+
 // desktop button
 #define FILENAME "power.icon"
 #define BPP 32
@@ -46,8 +68,6 @@
 
 // minimum window size (height and width) - do not go below 1
 #define MINIMUM_SIZE 100
-// snap distance, 0 to disable
-#define SNAP 25
 
 #define ALT_FULLSCREEN_WIDTH 1920
 #define ALT_FULLSCREEN_HEIGHT 1080
