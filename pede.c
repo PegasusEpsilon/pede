@@ -483,6 +483,10 @@ int main (int argc, char **argv, char **envp) {
 	// set up root window
 	XChangeProperty(display, root.handle, atom[_NET_SUPPORTING_WM_CHECK],
 		atom[WINDOW], 32, PropModeReplace, (void *)&pede, 1);
+	// the _NET_SUPPORTED property should only contain supported _NET_ atoms
+	// currently we're just throwing all the atoms we know about into it
+	// this is technically an error, but the spec is written in such a way
+	// that no client is actually allowed to throw a fit about it
 	XChangeProperty(display, root.handle,
 		XInternAtom(display, "_NET_SUPPORTED", False), atom[ATOM], 32,
 		PropModeReplace, (void *)atom, sizeof(atom) / sizeof(Atom));
