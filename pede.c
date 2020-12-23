@@ -399,9 +399,6 @@ static void lock_ignoring_button_hook (unsigned btn, unsigned mod) {
 int main (int argc, char **argv, char **envp) {
 	// We only ever need argv[0]. If it doesn't exist, we'll just crash later.
 	argc = argc;
-#ifdef DEBUG
-	enable_debug();
-#endif
 
 	// save this for signal handlers
 	argv0 = argv[0];
