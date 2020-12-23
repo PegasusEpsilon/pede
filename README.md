@@ -20,7 +20,7 @@ This DE is not for the faint of heart. It is for the extreme minimalist.
 
 ## What *does* pede do, then?
 
-- ~~It takes less than a megabyte of RAM, even with how fat linux has gotten~~ Unfortunately a recent rewrite took it to 1,100kB - just 76kB larger than a megabyte. Maybe I'll find a place to squeeze it...
+- ~~It takes less than a megabyte of RAM, even with how fat linux has gotten~~ Unfortunately a recent rewrite took it to 1,100kB on load - just 76kB larger than a megabyte. Xlib shenanigans see that grow to 2,232kB before stabilizing. A rewrite in xcb will help, and it's already started, but it will be a while.
 - It positions windows. It positions windows ***well***.
 - It closes windows politely if they ask for politeness, rudely if they do not
 - It has workspaces
