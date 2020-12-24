@@ -2,28 +2,22 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+void swap_long_array (long unsigned *array, size_t a, size_t b) {
+	array[a] ^= array[b];
+	array[b] ^= array[a];
+	array[a] ^= array[b];
+}
+
 void rotate_long_array_up (long unsigned *array, size_t len) {
-	for (size_t i = 1; i < len; i++) {
-		array[i] ^= array[0];
-		array[0] ^= array[i];
-		array[i] ^= array[0];
-	}
+	for (size_t i = 1; i < len; i++) swap_long_array(array, i, 0);
 }
 
 void rotate_long_array_down (long unsigned *array, size_t len) {
-	for (size_t i = len; --i;) {
-		array[i] ^= array[0];
-		array[0] ^= array[i];
-		array[i] ^= array[0];
-	}
+	for (size_t i = len; --i;) swap_long_array(array, i, 0);
 }
 
 void reverse_long_array (long unsigned *array, size_t len) {
-	for (size_t i = len-- / 2; i--;) {
-		array[i] ^= array[len - i];
-		array[len - i] ^= array[i];
-		array[i] ^= array[len - i];
-	}
+	for (size_t i = len-- / 2; i--;) swap_long_array(array, i, len - i);
 }
 
 bool long_array_contains (

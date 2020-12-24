@@ -12,6 +12,10 @@
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
+void swap_long_array (long unsigned *, size_t, size_t);
+#define swap_window_array(x, y, z) swap_long_array((long unsigned *)x, y, z)
+#define swap_atom_array(x, y, z) swap_long_array((long unsigned *)x, y, z)
+
 void rotate_long_array_up (long unsigned *, size_t);
 #define rotate_window_array_up(x, y) rotate_long_array_up((long unsigned *)x, y)
 #define rotate_atom_array_up(x, y) rotate_long_array_up((long unsigned *)x, y)
