@@ -8,7 +8,7 @@ mousetrap. I think I'm doing a pretty decent job, honestly.
 ## Some information about pede:
 
 - It does not reparent
-- It does not composite
+- It does not composite (use xcompmgr or compiz if you want that stuff)
 - It does not read any configuration files other than the power button image data
 - It does not draw any UI widgets other than its power button
   - No, not even a confirmation dialog when you click the button. Be careful.
