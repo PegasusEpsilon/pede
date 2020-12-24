@@ -36,7 +36,7 @@ ATOM_EXPANDO(_NET_WM_WINDOW_TYPE_MENU)  	// menus close when focus changes
 ATOM_EXPANDO(_NET_WM_WINDOW_TYPE_COMBO) 	// xfrun4's _COMBO acts like a _MENU
 ATOM_EXPANDO(_NET_WM_WINDOW_TYPE_NORMAL)	// can be cycled with alt+tab
 ATOM_EXPANDO(_NET_WM_WINDOW_TYPE_DIALOG)	// only included for window_type()
-//ATOM_EXPANDO(_NET_WM_WINDOW_TYPE_TOOLTIP)	// doesn't need focus
+ATOM_EXPANDO(_NET_WM_WINDOW_TYPE_NOTIFICATION)
 ATOM_EXPANDO(_NET_WM_WINDOW_TYPE_DESKTOP)	// always on bottom
 #undef ATOM_EXPANDO
 #endif // ATOM_EXPANDO
