@@ -14,6 +14,7 @@
 #include "types.h"
 #include "config.h"
 #include "wm_core.h"
+#include "pager.h"
 
 typedef enum {
 #define KEY_EXPANDO(x) Kc ## x,
