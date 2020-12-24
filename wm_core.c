@@ -14,6 +14,7 @@
 #include "types.h"
 #include "atoms.h"
 #include "config.h"
+#include "pager.h"
 #include "util.h"
 
 long long nul;
@@ -254,38 +255,6 @@ void focus_active_window (void) {
 	XLowerWindow(display, pede);
 	Window active = active_window();
 	if (active) focus_window(active);
-}
-
-Window *page_window_list;
-unsigned page_window_count;
-void page_windows_start (void) {
-	page_window_count = filter_windows(&page_window_list, &window_pageable);
-	reverse_window_array(page_window_list, page_window_count);
-}
-
-void page_windows (int direction) {
-	if (!page_window_list) page_windows_start();
-	Window tmp;
-	if (RaiseLowest == direction) {
-		tmp = page_window_list[0];
-		for (unsigned i = 0; ++i < page_window_count;)
-			page_window_list[i - 1] = page_window_list[i];
-		page_window_list[page_window_count - 1] = tmp;
-	} else {
-		tmp = page_window_list[page_window_count - 1];
-		for (unsigned i = page_window_count - 1; i--;)
-			page_window_list[i + 1] = page_window_list[i];
-		page_window_list[0] = tmp;
-	}
-	XRaiseWindow(display, page_window_list[0]);
-	focus_window(page_window_list[0]);
-	XRestackWindows(display, page_window_list, (int)page_window_count);
-}
-
-void page_windows_end (void) {
-	XFree(page_window_list);
-	page_window_list = NULL;
-	page_window_count = 0;
 }
 
 // _NET_WM_STATE management
