@@ -19,8 +19,15 @@ void page_windows_start (void) {
 
 void page_windows (int down) {
 	if (!list) page_windows_start();
-	if (!down) rotate_window_array_up(list, count);
-	else rotate_window_array_down(list, count);
+	if (down) {
+		if (current) swap_window_array(list, current, 0);
+		else rotate_window_array_up(list, count);
+		current = (current + count - 1) % count;
+	} else {
+		current = (current + 1) % count;
+		if (current) swap_window_array(list, current, 0);
+		else rotate_window_array_down(list, count);
+	}
 	XRestackWindows(display, list, (int)count);
 }
 
