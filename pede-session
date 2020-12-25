@@ -22,7 +22,7 @@ pushd $HOME
 /usr/bin/xset -dpms s off &
 
 # start some daemons
-/usr/bin/xcompmgr -cfr 16 &
+/usr/bin/xcompmgr -cfr 16 -D2 &
 /usr/bin/xscreensaver &
 POLKIT="/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1"
 test -x "$POLKIT" && "$POLKIT" &
