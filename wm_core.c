@@ -216,6 +216,9 @@ void update_client_list (void) {
 	// _NET_CLIENT_LIST_STACKING is the one that should be updated here
 	XChangeProperty(display, root.handle, atom[_NET_CLIENT_LIST_STACKING],
 		atom[WINDOW], 32, PropModeReplace, (void *)list, count);
+	// All the same, we need something here, so until we get a properly updated list...
+	XChangeProperty(display, root.handle, atom[_NET_CLIENT_LIST],
+		atom[WINDOW], 32, PropModeReplace, (void *)list, count);
 	XFree(list);
 }
 
