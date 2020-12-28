@@ -206,18 +206,11 @@ unsigned filter_windows (Window **list, Bool (*filter)(Window window)) {
 	return (unsigned)delete_window_from_array(*list, count, filter);
 }
 
-void update_client_list (void) {
+void update_client_list_stacking (void) {
 	Window *list = NULL;
 	int count = (int)filter_windows(&list, &window_managed);
-	// _NET_CLIENT_LIST should contain all managed windows
-	// in order of mapping time and should be updated as a
-	// FIFO in the MapNotify and UnmapNotify events
-	//
 	// _NET_CLIENT_LIST_STACKING is the one that should be updated here
 	XChangeProperty(display, root.handle, atom[_NET_CLIENT_LIST_STACKING],
-		atom[WINDOW], 32, PropModeReplace, (void *)list, count);
-	// All the same, we need something here, so until we get a properly updated list...
-	XChangeProperty(display, root.handle, atom[_NET_CLIENT_LIST],
 		atom[WINDOW], 32, PropModeReplace, (void *)list, count);
 	XFree(list);
 }
@@ -252,7 +245,7 @@ void focus_window (Window window) {
 	XChangeProperty(display, root.handle, atom[_NET_ACTIVE_WINDOW],
 		atom[WINDOW], 32, PropModeReplace, (void *)&window, 1);
 	XSetInputFocus(display, window, RevertToParent, CurrentTime);
-	update_client_list();
+	update_client_list_stacking();
 }
 
 void focus_active_window (void) {

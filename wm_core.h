@@ -37,7 +37,7 @@ Bool window_pageable (Window);
 Bool window_managed (Window);
 Bool window_visible (Window);
 Workspace window_workspace (Window);
-void update_client_list (void);
+void update_client_list_stacking (void);
 void window_diagnostic (char *, Window, char *);
 void toggle_fullscreen (void);
 void close_window (Window);

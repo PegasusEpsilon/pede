@@ -228,12 +228,23 @@ void event_loop (void) {
 				XFree(state_name);
 			}
 			break;
-		case MapRequest:
+		case MapRequest: {
 			map_window(&event.xmaprequest);
 			set_workspace(event.xmaprequest.window, active_workspace());
 			focus_window(event.xmaprequest.window);
+			Window *list;
+			long unsigned count = get_window_property_array(root.handle,
+				atom[_NET_CLIENT_LIST], atom[WINDOW], (void **)&list);
+			Window *new_list = realloc(list, ++count * sizeof(Window));
+			if (new_list) {
+				list = new_list;
+				list[count - 1] = event.xmaprequest.window;
+			}
+			XChangeProperty(display, root.handle, atom[_NET_CLIENT_LIST],
+				atom[WINDOW], 32, PropModeReplace, (void *)list, (int)count);
 			printf("Window 0x%08lx mapped\n", event.xmaprequest.window);
 			break;
+		};
 		case DestroyNotify:
 			// Can't get title of a destroyed window, so don't do window_diagnostic
 			printf("Window 0x%08x has been destroyed.\n", event.xdestroywindow.window);
@@ -369,9 +380,18 @@ void event_loop (void) {
 			XUngrabPointer(display, event.xbutton.time);
 			break;
 		case UnmapNotify:
-			if (active_workspace() == window_workspace(event.xunmap.window))
+			if (active_workspace() == window_workspace(event.xunmap.window)) {
+				window_diagnostic("window ", event.xunmap.window, " has been unmapped\n");
+				Window *list;
+				long unsigned count = get_window_property_array(root.handle,
+					atom[_NET_CLIENT_LIST], atom[WINDOW], (void **)&list);
+				count = delete_window_from_array(list, count, window_isnt(
+					event.xunmap.window));
+				XChangeProperty(display, root.handle, atom[_NET_CLIENT_LIST],
+					atom[WINDOW], 32, PropModeReplace, (void *)list, (int)count);
 				XDeleteProperty(display, event.xunmap.window,
 					atom[_NET_WM_DESKTOP]);
+			}
 			break;
 		case MappingNotify: // display start menu?
 		case CreateNotify: // fall through
@@ -493,7 +513,6 @@ int main (int argc, char **argv, char **envp) {
 	XChangeProperty(display, root.handle,
 		XInternAtom(display, "_NET_NUMBER_OF_DESKTOPS", False),
 		atom[CARDINAL], 32, PropModeReplace, (void *)"\4\0\0\0", 1);
-	update_client_list();
 
 	// subscribe to events we actually care about
 	// if the WM being replaced destroys their input selection holding window
