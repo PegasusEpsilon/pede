@@ -230,8 +230,9 @@ Window active_window (void) {
 Bool should_focus (Window window) {
 	Atom do_not_focus[] = {
 		atom[_NET_WM_WINDOW_TYPE_MENU], // menus close when focus changes
-		atom[_NET_WM_WINDOW_TYPE_NOTIFICATION],
 		atom[_NET_WM_WINDOW_TYPE_COMBO], // xfrun4's _COMBO acts like a _MENU
+		atom[_NET_WM_WINDOW_TYPE_TOOLTIP],
+		atom[_NET_WM_WINDOW_TYPE_NOTIFICATION],
 		0
 	};
 	Atom type = window_type(window);
