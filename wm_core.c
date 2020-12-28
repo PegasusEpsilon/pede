@@ -337,8 +337,6 @@ void add_window_state (Window window, Atom state) {
 	XFree(states);
 }
 
-Atom target_state;
-Bool state_matcher (Atom state) { return target_state != state; }
 void remove_window_state_internal (
 	Window window, Atom state, Atom *states, long unsigned count
 ) {
@@ -346,9 +344,8 @@ void remove_window_state_internal (
 
 	while (count--) {
 		if (state == states[count]) {
-			target_state = state;
 			long unsigned new_count = delete_atom_from_array(
-				states, count, &state_matcher);
+				states, count, atom_isnt(state));
 
 			if (!new_count) {
 				window_diagnostic("Window ", window,
@@ -442,9 +439,6 @@ void activate_workspace (const Workspace which) {
 
 	Window *windows;
 	long unsigned count = filter_windows(&windows, &window_managed);
-	//puts("managed window list:");
-	//for (long unsigned i = count; i--;)
-	//	window_diagnostic("", windows[i], "\n");
 
 	/* all windows visible */
 	if ((uint32_t)-1 == which)
