@@ -12,6 +12,10 @@
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
+Bool (*long_isnt (long unsigned)) (long unsigned);
+#define window_isnt(x) long_isnt((long unsigned)x)
+#define atom_isnt(x) long_isnt((long unsigned)x)
+
 void swap_long_array (long unsigned *, size_t, size_t);
 #define swap_window_array(x, y, z) swap_long_array((long unsigned *)x, y, z)
 #define swap_atom_array(x, y, z) swap_long_array((long unsigned *)x, y, z)
