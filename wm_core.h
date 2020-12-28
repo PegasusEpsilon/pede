@@ -30,7 +30,7 @@ void clear_sticky (Window);
 void set_bottom (Window);
 void set_top (Window);
 */
-long unsigned get_window_property_array (Window, Atom, Atom, Atom *);
+long unsigned get_window_property_array (Window, Atom, Atom, void **);
 Bool window_property_array_contains (Window, Atom, Atom);
 unsigned filter_windows (Window **, Bool (*)(Window));
 Bool window_pageable (Window);
