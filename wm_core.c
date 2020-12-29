@@ -149,7 +149,7 @@ Workspace window_workspace (Window window) {
 }
 
 Bool window_visible (Window window) {
-	XWindowAttributes attrs;
+	XWindowAttributes attrs = { 0 };
 	XGetWindowAttributes(display, window, &attrs);
 	return IsViewable == attrs.map_state;
 }
