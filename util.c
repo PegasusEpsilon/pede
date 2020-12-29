@@ -1,12 +1,12 @@
 #include <stdint.h>
-#include <stdio.h>
+#include <stddef.h>
 #include <stdbool.h>
 
 static long unsigned target_long = 0;
-bool long_matcher (long unsigned test) { return target_long != test; }
+bool long_compare (long unsigned test) { return target_long != test; }
 bool (*long_isnt (long unsigned target)) (long unsigned) {
-        target_long = target;
-        return &long_matcher;
+	target_long = target;
+	return &long_compare;
 }
 
 void swap_long_array (long unsigned *array, size_t a, size_t b) {

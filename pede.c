@@ -379,8 +379,9 @@ void event_loop (void) {
 		case ButtonRelease:
 			XUngrabPointer(display, event.xbutton.time);
 			break;
-		case UnmapNotify:
-			if (active_workspace() == window_workspace(event.xunmap.window)) {
+		case UnmapNotify: {
+			Workspace ws = window_workspace(event.xunmap.window);
+			if (-1 == ws || active_workspace() == ws) {
 				window_diagnostic("window ", event.xunmap.window, " has been unmapped\n");
 				Window *list;
 				long unsigned count = get_window_property_array(root.handle,
@@ -393,6 +394,7 @@ void event_loop (void) {
 					atom[_NET_WM_DESKTOP]);
 			}
 			break;
+		};
 		case MappingNotify: // display start menu?
 		case CreateNotify: // fall through
 		case ConfigureNotify:
