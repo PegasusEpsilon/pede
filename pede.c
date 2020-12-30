@@ -541,8 +541,9 @@ int main (int argc, char **argv, char **envp) {
 	// super+right = resize window
 	lock_ignoring_button_hook(Button3, Mod4Mask);
 
-	activate_workspace(active_workspace());
+	XMapWindow(display, pede);
 	XPutImage(display, pede, gc, img, 0, 0, 0, 0, WIDTH, HEIGHT);
+	activate_workspace(active_workspace());
 
 	// actually do the thing
 	event_loop();
