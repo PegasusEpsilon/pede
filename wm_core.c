@@ -457,6 +457,7 @@ void activate_workspace (const Workspace which) {
 	}
 
 	XFree(windows);
+	focus_window(active_window());
 	XSync(display, True);
 }
 
