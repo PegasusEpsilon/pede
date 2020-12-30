@@ -12,6 +12,7 @@
 
 #include "types.h"
 
+extern long unsigned unsafe;
 extern long long nul;
 #define VOID ((void *)&nul)
 extern Display *display;
