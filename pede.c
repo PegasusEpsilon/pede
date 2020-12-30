@@ -394,6 +394,7 @@ void event_loop (void) {
 				XChangeProperty(display, root.handle, atom[_NET_CLIENT_LIST],
 					atom[WINDOW], 32, PropModeReplace, (void *)list, (int)count);
 				XFree(list);
+				unsafe = XNextRequest(display); // window may have been deleted
 				XDeleteProperty(display, event.xunmap.window,
 					atom[_NET_WM_DESKTOP]);
 			}
