@@ -23,9 +23,10 @@ Display *display;
 struct { Window handle; unsigned width, height; } root;
 Window pede;
 
-void *XGetWindowPropertyString (Window window, Atom property) {
+long unsigned unsafe = 0;
+void *get_window_property_string (Window window, Atom property) {
 	void *data = NULL;
-
+	unsafe = XNextRequest(display); // window may have been deleted
 	XGetWindowProperty(display, window, property, 0, 9999, False,
 		AnyPropertyType, VOID, VOID, VOID, VOID, (void *)&data);
 	return data;
@@ -36,7 +37,7 @@ char *window_title (Window window) {
 	char *title;
 	Atom atoms[3] = { atom[CLASS], atom[WM_NAME], atom[_NET_WM_NAME] };
 	for (int i = 3; i--;) {
-		title = XGetWindowPropertyString(window, atoms[i]);
+		title = get_window_property_string(window, atoms[i]);
 		if (title) return title;
 	}
 	char *tmp = malloc(strlen(unknown) + 1);
@@ -141,6 +142,7 @@ Workspace active_workspace (void) {
 
 Workspace window_workspace (Window window) {
 	Workspace ret, *tmp;
+	unsafe = XNextRequest(display); // window may have been deleted
 	XGetWindowProperty(display, window, atom[_NET_WM_DESKTOP], 0, 1,
 		False, atom[CARDINAL], VOID, VOID, VOID, VOID, (void *)&tmp);
 	ret = tmp ? *tmp : -1;
@@ -457,7 +459,7 @@ void activate_workspace (const Workspace which) {
 	}
 
 	XFree(windows);
-	focus_window(active_window());
+	focus_active_window();
 	XSync(display, True);
 }
 

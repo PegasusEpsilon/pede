@@ -45,9 +45,9 @@ static const char *_XErrorList[] = {
 int death_proof (Display *ignored, XErrorEvent *error) {
 	ignored = ignored; // stfu gcc
 	if (18 < error->error_code) error->error_code = 18;
-	printf("X request %d: Error %d/%d.%d: %s\n", error->serial,
-		error->error_code, error->request_code, error->minor_code,
-		_XErrorList[error->error_code]);
+	if (unsafe != error->serial) printf("X request %d: Error %d/%d.%d: %s\n",
+		error->serial, error->error_code, error->request_code,
+		error->minor_code, _XErrorList[error->error_code]);
 	fflush(stdout);
 	return 0;
 }
@@ -175,6 +175,7 @@ void event_loop (void) {
 			}
 			break;
 		case ConfigureRequest:
+			unsafe = XNextRequest(display); // window may have been deleted
 			XConfigureWindow(
 				event.xconfigurerequest.display,
 				event.xconfigurerequest.window,
@@ -541,7 +542,7 @@ int main (int argc, char **argv, char **envp) {
 	lock_ignoring_button_hook(Button3, Mod4Mask);
 
 	activate_workspace(active_workspace());
-	XMapWindow(display, pede);
+	XPutImage(display, pede, gc, img, 0, 0, 0, 0, WIDTH, HEIGHT);
 
 	// actually do the thing
 	event_loop();
