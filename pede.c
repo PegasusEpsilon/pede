@@ -42,8 +42,8 @@ static const char *_XErrorList[] = {
 	"BadColor", "BadGC", "BadIDChoice", "BadName", "BadLength",
 	"BadImplementation", "unknownerror"
 };
-int death_proof (Display *ignored, XErrorEvent *error) {
-	ignored = ignored; // stfu gcc
+int death_proof (Display *unused, XErrorEvent *error) {
+	(void)unused; // stfu
 	if (18 < error->error_code) error->error_code = 18;
 	if (unsafe != error->serial) printf("X request %d: Error %d/%d.%d: %s\n",
 		error->serial, error->error_code, error->request_code,
@@ -425,7 +425,7 @@ static void lock_ignoring_button_hook (unsigned btn, unsigned mod) {
 
 int main (int argc, char **argv, char **envp) {
 	// We only ever need argv[0]. If it doesn't exist, we'll just crash later.
-	argc = argc;
+	(void)argc; // stfu
 
 	// save this for signal handlers
 	argv0 = argv[0];

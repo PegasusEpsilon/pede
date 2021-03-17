@@ -14,15 +14,15 @@
 #include "types.h"
 #include "defines.h"
 
-static void keep_on_screen (Window ignored, BOX *t) {
-	ignored = ignored; // stfu gcc
+static void keep_on_screen (Window unused, BOX *t) {
+	(void)unused; // stfu
 	// constrain windows to viewable area
 	t->pos.x = MIN(MAX(t->pos.x, 0), (int)(root.width - t->size.w));
 	t->pos.y = MIN(MAX(t->pos.y, 0), (int)(root.height - t->size.h));
 }
 
-static void snap_to_center (Window ignored, BOX *t) {
-	ignored = ignored; // stfu gcc
+static void snap_to_center (Window unused, BOX *t) {
+	(void)unused; // stfu
 	//POINT s_center = (POINT){ root.width / 2, root.height / 2 };
 	//POINT w_center = (POINT){ t->width / 2, t->h / 2 };
 	POINT center = (POINT){
@@ -35,8 +35,8 @@ static void snap_to_center (Window ignored, BOX *t) {
 		t->pos.y = (int)center.y;
 }
 
-static void snap_to_edges (Window ignored, BOX *t) {
-	ignored = ignored; // stfu gcc
+static void snap_to_edges (Window unused, BOX *t) {
+	(void)unused; // stfu
 	// snap while dragging (window size constant)
 	unsigned snap_x = root.width - t->size.w;
 	unsigned snap_y = root.height - t->size.h;

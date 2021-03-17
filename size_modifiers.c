@@ -16,8 +16,8 @@
 #include "atoms.h"
 #include "wm_core.h"
 
-void keep_on_screen (Window ignored, char side, BOX *t) {
-	ignored = ignored; // stfu gcc
+void keep_on_screen (Window unused, char side, BOX *t) {
+	(void)unused; // stfu
 	// constrain windows to viewable area
 	if (SIDE_TOP(side) && t->pos.y < 0) {
 		t->size.h += (unsigned)t->pos.y;
@@ -31,8 +31,8 @@ void keep_on_screen (Window ignored, char side, BOX *t) {
 		t->size.w = root.width - (unsigned)t->pos.x;
 }
 
-void snap_to_edges (Window ignored, char side, BOX *t) {
-	ignored = ignored; // stfu gcc
+void snap_to_edges (Window unused, char side, BOX *t) {
+	(void)unused; // stfu
 	// snap while resizing (window size varies)
 	unsigned snap_w = root.width - (unsigned)t->pos.x;
 	unsigned snap_h = root.height - (unsigned)t->pos.y;
@@ -48,8 +48,8 @@ void snap_to_edges (Window ignored, char side, BOX *t) {
 		t->size.w = snap_w;
 }
 
-void snap_to_center (Window ignored, char side, BOX *t) {
-	ignored = ignored; // stfu gcc
+void snap_to_center (Window unused, char side, BOX *t) {
+	(void)unused; // stfu
 	POINT center = (POINT){
 		.x = (int)root.width / 2,
 		.y = (int)root.height / 2
