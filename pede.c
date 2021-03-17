@@ -499,7 +499,15 @@ int main (int argc, char **argv, char **envp) {
 	filename = malloc(1 + strlen(argv[0]));
 	strcpy(filename, argv[0]);
 	dirname(filename);
-	filename = realloc(filename, 2 + strlen(filename) + strlen(FILENAME));
+	{
+		char *new = NULL;
+		new = realloc(filename, 2 + strlen(filename) + strlen(FILENAME));
+		if (new) filename = new;
+		else {
+			puts("failed to realloc filename in pede::main");
+			exit(EXIT_FAILURE);
+		}
+	};
 	strcat(strcat(filename, "/"), FILENAME);
 	img = load_image(visualinfo.visual, filename);
 	// load_image frees the filename for us

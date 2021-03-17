@@ -73,7 +73,15 @@ static void snap_to_siblings (Window moving, BOX *t) {
 		if (IsViewable != attrs.map_state) continue;
 		if (window_property_array_contains(windows[i], atom[_NET_WM_WINDOW_TYPE],
 			atom[_NET_WM_WINDOW_TYPE_DESKTOP])) continue;
-		siblings = realloc(siblings, (2 + sibling_count) * sizeof(*siblings));
+		{
+			POINT *new = NULL;
+			new = realloc(siblings, (2 + sibling_count) * sizeof(*siblings));
+			if (new) siblings = new;
+			else {
+				puts("failed to realloc sibling list in move modifiers");
+				exit(EXIT_FAILURE);
+			}
+		};
 		XGetGeometry(display, windows[i], VOID,
 			&siblings[sibling_count].x,
 			&siblings[sibling_count].y,
