@@ -1,3 +1,5 @@
+# DUE TO RECENT GITHUB POLICY CHANGES ALL MY PROJECTS HAVE BEEN MOVED TO [GITLAB](https://gitlab.com/pegasusepsilon)
+
 # Pegasus Epsilon's Desktop Environment (pede)
 
 ![My current setup, showing pede taking a whopping 952kB of RAM](https://live.staticflickr.com/65535/49795270571_6f23c61ba4_o.png)
